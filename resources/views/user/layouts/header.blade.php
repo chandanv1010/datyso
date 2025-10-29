@@ -123,6 +123,16 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="/gio-hang" class="nav-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="1.2rem" height="1.2rem"
+                                fill="currentColor" class="bi bi-cart mb-1" viewBox="0 0 16 16">
+                                <path d="M0 1.5A.5.5 0 0 1 .5 1h1.11a.5.5 0 0 1 .485.379L2.89 5H14.5a.5.5 0 0 1 .491.592l-1.5 7A.5.5 0 0 1 13 
+                                        13H4a.5.5 0 0 1-.491-.408L1.01 2H.5a.5.5 0 0 1-.5-.5zM3.14 6l1.25 5.5h8.22l1.25-5.5H3.14zM5.5 
+                                        14a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                            </svg>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <button class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
                             aria-expanded="false">
                             <svg xmlns="http://www.w3.org/2000/svg" width="1.2rem" height="1.2rem"
@@ -342,6 +352,16 @@
                                 <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
                                 <path fill-rule="evenodd"
                                     d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1" />
+                            </svg>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/gio-hang" class="nav-link">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="1.2rem" height="1.2rem"
+                                fill="currentColor" class="bi bi-cart mb-1" viewBox="0 0 16 16">
+                                <path d="M0 1.5A.5.5 0 0 1 .5 1h1.11a.5.5 0 0 1 .485.379L2.89 5H14.5a.5.5 0 0 1 .491.592l-1.5 7A.5.5 0 0 1 13 
+                                        13H4a.5.5 0 0 1-.491-.408L1.01 2H.5a.5.5 0 0 1-.5-.5zM3.14 6l1.25 5.5h8.22l1.25-5.5H3.14zM5.5 
+                                        14a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
                             </svg>
                         </a>
                     </li>
