@@ -1387,7 +1387,7 @@ figure figcaption::before {
     background: #002ab0;
     color: #fff;
     border: none;
-    border-radius: 6px 0 0 6px;
+    border-radius: 6px;
     padding: 10px 12px;
     font-size: 1.3rem;
     display: none;
@@ -1413,7 +1413,7 @@ figure figcaption::before {
     transition: right 0.3s ease;
     padding:10px;
     background: #eaeaea;
-    z-index: 9998;
+    z-index: 10000;
 }
 .toc-sidebar.open {
     right: 0;
@@ -1433,4 +1433,14 @@ figure figcaption::before {
 
 .toc-sidebar .toc-list{
     padding:0;
+}
+
+@media (max-width: 500px){
+    .toc-toggle-btn{
+        display: block !important;
+        right:0 !important;
+        opacity: 0.5;
+        background: #eaeaea;
+        color:#000000;
+    }
 }

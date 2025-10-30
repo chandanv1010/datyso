@@ -110,7 +110,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             function positionTocButton() {
                 const rect = content.getBoundingClientRect();
                 const rightSpace = window.innerWidth - rect.right;
-                tocToggle.style.right = `${rightSpace + 20}px`; // cách content 20px
+                tocToggle.style.right = `${rightSpace - 80}px`; // cách content 20px
             }
 
             function checkTocPosition() {
