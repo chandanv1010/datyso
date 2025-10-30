@@ -13,7 +13,6 @@ class TableOfContent extends Component
 
     public function __construct(public string $content)
     {
-        // Gọi extract để lấy headings
         $this->items = $this->extract($content);
     }
 
@@ -23,7 +22,7 @@ class TableOfContent extends Component
     public static function injectIds($content, &$items)
     {
         $content = $content ?? '';
-        if(empty($content) || trim($content) === ''){
+        if (empty($content) || trim($content) === '') {
             $items = [];
             return '';
         }
@@ -39,12 +38,12 @@ class TableOfContent extends Component
 
         foreach ($headings as $heading) {
             $level = (int) substr($heading->nodeName, 1);
-
-            // Lấy text gốc
             $text = trim($heading->textContent);
 
-            // Sinh slug: chuẩn, bỏ dấu + lowercase
-            $id = Str::slug($text, '-'); // vd: "vach-op-tuong-go-oc-cho-la-gi"
+            // ⚙️ BỎ phần số đầu dòng để slug giống extract()
+            $cleanText = preg_replace('/^\d+(\.\d+)*\s*/u', '', $text);
+
+            $id = Str::slug($cleanText, '-'); // thống nhất slug
 
             $heading->setAttribute('id', $id);
 
@@ -62,7 +61,6 @@ class TableOfContent extends Component
             ];
         }
 
-        // Xuất lại HTML
         return $dom->saveHTML();
     }
 
@@ -72,11 +70,11 @@ class TableOfContent extends Component
     public static function extract(?string $content): array
     {
         $content = $content ?? '';
-        if(empty($content) || trim($content) === ''){
+        if (empty($content) || trim($content) === '') {
             return [];
         }
 
-        if(strip_tags($content) === $content){
+        if (strip_tags($content) === $content) {
             return [];
         }
 
@@ -87,30 +85,24 @@ class TableOfContent extends Component
 
         for ($i = 0; $i < count($matches[0]); $i++) {
             $level = (int) $matches[1][$i];
-            $raw   = $matches[2][$i];
+            $raw = $matches[2][$i];
 
             // Decode entity + bỏ tag rác
             $text = html_entity_decode(trim(strip_tags($raw)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            $text = preg_replace('/^\d+(\.\d+)*\s*/u', '', $text);
+            $cleanText = preg_replace('/^\d+(\.\d+)*\s*/u', '', $text);
 
-
-            // Sinh slug chuẩn (không dấu, lowercase)
-            $id = Str::slug($text, '-');
+            $id = Str::slug($cleanText, '-'); // 👈 Giống injectIds()
 
             // Đánh số heading
-            if (!isset($numbering[$level])) {
-                $numbering[$level] = 0;
-            }
+            if (!isset($numbering[$level])) $numbering[$level] = 0;
             $numbering[$level]++;
-            // reset level con
             for ($j = $level + 1; $j <= 4; $j++) {
                 $numbering[$j] = 0;
             }
 
-            // build số như 1.2.1
             $numParts = [];
             for ($j = 2; $j <= $level; $j++) {
-                if (isset($numbering[$j]) &&  $numbering[$j] > 0) {
+                if (isset($numbering[$j]) && $numbering[$j] > 0) {
                     $numParts[] = $numbering[$j];
                 }
             }

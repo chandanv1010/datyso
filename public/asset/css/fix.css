@@ -1368,3 +1368,69 @@ figure figcaption::before {
 .ml15{
     margin-left:20px;
 }
+
+#content{
+    position: relative;
+}
+
+.table-of-contents {
+    transition: all 0.3s ease;
+}
+
+/* Nút 3 gạch nhỏ */
+.toc-toggle-btn{
+    position: fixed;
+    top: 30%;
+    right: 0;
+    transform: translateY(-50%);
+    z-index: 9999;
+    background: #002ab0;
+    color: #fff;
+    border: none;
+    border-radius: 6px 0 0 6px;
+    padding: 10px 12px;
+    font-size: 1.3rem;
+    display: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0.8;
+}
+
+.toc-toggle-btn:hover {
+    opacity: 1;
+}
+
+/* TOC Sidebar */
+.toc-sidebar {
+    position: fixed;
+    top: 0;
+    right: -350px;
+    width: 320px;
+    height: 100%;
+    background: #fff;
+    box-shadow: -3px 0 15px rgba(0, 0, 0, 0.15);
+    overflow-y: auto;
+    transition: right 0.3s ease;
+    padding:10px;
+    background: #eaeaea;
+    z-index: 9998;
+}
+.toc-sidebar.open {
+    right: 0;
+}
+
+/* Ẩn nút khi chưa scroll qua TOC */
+.hidden {
+    display: none !important;
+}
+
+.toc-sidebar .table-of-contents{
+    background: transparent !important;
+    box-shadow: none !important;
+    padding:0 !important;
+    border:0 !important;
+}
+
+.toc-sidebar .toc-list{
+    padding:0;
+}

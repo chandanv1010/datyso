@@ -70,8 +70,20 @@
                             <img class="mb-3" src="{{ getImageUrl($post->image) }}" alt="{{ $post->slug }}" style="width: 100%;">
                             <div class="row" id="content">
                                 <div class="col-12 editor-content">
-                                    <x-table-of-content :content="$contentWithToc" />
+                                    <div id="toc-original">
+                                        <x-table-of-content :content="$contentWithToc" />
+                                    </div>
                                     {!! $contentWithToc !!}
+                                     {{-- Nút ☰ xuất hiện sau khi cuộn qua TOC nguyên bản --}}
+                                    <button id="toc-toggle" class="toc-toggle-btn">
+                                        ☰
+                                    </button>
+
+                                    {{-- TOC Sidebar cố định bên phải --}}
+                                    <div id="toc-sidebar" class="toc-sidebar">
+                                        <x-table-of-content :content="$contentWithToc" />
+                                    </div>
+                                    
                                 </div>
                                 @php
                                      $shareLink = urlencode(route('post.detail', ['postSlug' => $post->slug]));
@@ -174,4 +186,6 @@
     </div>
 @endsection
 @section('footer')
+
+
 @endsection

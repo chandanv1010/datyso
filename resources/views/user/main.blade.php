@@ -94,6 +94,58 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     @yield('footer')
     <script src="{{ asset('asset/toastr.min.js') }}"></script>
     <script src="{{ asset('asset/js/fix.js') }}"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tocOriginal = document.getElementById('toc-original');
+            const tocToggle = document.getElementById('toc-toggle');
+            const tocSidebar = document.getElementById('toc-sidebar');
+            const tocClose = document.getElementById('toc-close');
+            const content = document.getElementById('content');
+
+            if (!tocOriginal || !tocToggle || !content) return;
+
+            tocToggle.style.display = 'none';
+
+            function positionTocButton() {
+                const rect = content.getBoundingClientRect();
+                const rightSpace = window.innerWidth - rect.right;
+                tocToggle.style.right = `${rightSpace + 20}px`; // cách content 20px
+            }
+
+            function checkTocPosition() {
+                const rect = tocOriginal.getBoundingClientRect();
+                if (rect.bottom < 0) {
+                    tocToggle.style.display = 'block';
+                } else {
+                    tocToggle.style.display = 'none';
+                }
+            }
+
+            // Gọi khi load & resize & scroll
+            positionTocButton();
+            checkTocPosition();
+
+            window.addEventListener('resize', positionTocButton);
+            window.addEventListener('scroll', () => {
+                checkTocPosition();
+                positionTocButton();
+            });
+
+            // ✅ Kiểm tra tồn tại rồi mới add event
+            tocToggle.addEventListener('click', () => tocSidebar.classList.toggle('open'));
+
+            if (tocClose) {
+                tocClose.addEventListener('click', () => tocSidebar.classList.remove('open'));
+            }
+
+            document.addEventListener('click', (e) => {
+                if (!tocSidebar.contains(e.target) && !tocToggle.contains(e.target)) {
+                    tocSidebar.classList.remove('open');
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>
