@@ -53,6 +53,22 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
         rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+    <style>
+        #google_translate_element{
+            position: fixed;
+            top:0;
+            right:0;
+        }
+        #google_translate_element select {
+            background: #0088ff;
+            color: white;
+            border: none;
+            padding: 5px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+    </style>
 </head>
 
 
@@ -74,6 +90,25 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
 
     {!! isset($schema) ? $schema : null !!}
+
+
+    <!-- GOOGLE TRANSLATE -->
+    <div id="google_translate_element"></div>
+
+    <script type="text/javascript">
+    function googleTranslateElementInit() {
+        new google.translate.TranslateElement({
+        pageLanguage: 'vi', // Ngôn ngữ gốc của web (vi = tiếng Việt)
+        includedLanguages: 'vi,en,fr,ja,zh-CN,ko,de,ru,es', // Các ngôn ngữ muốn hỗ trợ
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false
+        }, 'google_translate_element');
+    }
+    </script>
+
+    <script type="text/javascript" 
+    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+    </script>
 
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous">
