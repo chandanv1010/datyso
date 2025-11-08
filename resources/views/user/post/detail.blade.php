@@ -21,8 +21,8 @@
             <div class="row">
                 <!-- Detail  -->
                 <div class="col-sm-9">
-                    <div class="bg-white p-3">
-                        <h1 style="font-size: 1.5rem; font-weight: 600;">{{ $post->name }}</h1>
+                    <div class="bg-white p-3 post-container">
+                        <h1>{{ $post->name }}</h1>
                         <div class="d-flex py-2 pe-4"
                             style="border-top: 0.8px solid rgba(128, 128, 128, 0.1); border-bottom: 0.8px solid rgba(128, 128, 128, 0.1);">
                             <div class="">
@@ -73,7 +73,9 @@
                                     <div id="toc-original">
                                         <x-table-of-content :content="$contentWithToc" />
                                     </div>
-                                    {!! $contentWithToc !!}
+                                    <div class="entry-content">
+                                        {!! $contentWithToc !!}
+                                    </div>
                                      {{-- Nút ☰ xuất hiện sau khi cuộn qua TOC nguyên bản --}}
                                     <button id="toc-toggle" class="toc-toggle-btn">
                                         ☰
