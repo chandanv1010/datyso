@@ -49,7 +49,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     <!-- ************************************************************** -->
     <link rel="stylesheet" href="{{ asset('/asset/css/home.css') }}">
     <link rel="stylesheet" href="{{ asset('/asset/toastr.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('asset/css/fix.css') }}">
+    <link rel="stylesheet" href="{{ asset('asset/css/fix.css') }}?time={{ time() }}">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
         rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
