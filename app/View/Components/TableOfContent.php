@@ -155,7 +155,7 @@ class TableOfContent extends Component
 
             $html .= '<li class="depth-' . $depth . ' mb-1">';
             $html .= "<{$tag} class=\"toc-heading depth-{$depth}\">";
-            $html .= "<a href=\"#{$item['id']}\" class=\"toc-link\">{$item['numbering']}{$cleanText}</a>";
+            $html .= "<a href=\"#{$item['id']}\" class=\"toc-link\">{$item['numbering']} {$cleanText}</a>";
             $html .= "</{$tag}>";
 
             // Sang heading kế tiếp

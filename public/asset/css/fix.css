@@ -1090,7 +1090,25 @@
 #toc-list {
     transition: all 0.3s ease-in-out;
 }
+h2.toc-heading{
+    font-size:14px !important;
+    font-weight: 700 !important;
+}
 
+h3.toc-heading{
+    font-weight: normal !important;
+    font-size:14px !important
+}
+
+.toc-heading > *{
+    color:#000 !important;
+}
+
+@media (max-width: 768px){
+    .tab-content .tab-pane > .p-5{
+        height:250px !important;
+    }
+}
 
 
 /** BACKEND */
