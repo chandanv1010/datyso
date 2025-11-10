@@ -1107,6 +1107,7 @@ h3.toc-heading{
 @media (max-width: 768px){
     .tab-content .tab-pane > .p-5{
         height:250px !important;
+        padding:10px !important;
     }
 }
 
