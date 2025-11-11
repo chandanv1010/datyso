@@ -31,7 +31,7 @@
                                         </svg>
                                         {{ date_format($post->updated_at, 'd/m/Y') }}
                                     </small>
-                                    <p class="mb-0 fw-semibold mb-1 overflow-hidden text-nowrap"><a href="{{ route('post.detail', ['postSlug' => $post->slug]) }}"
+                                    <p class="mb-0 fw-semibold mb-1 overflow-hidden"><a href="{{ route('post.detail', ['postSlug' => $post->slug]) }}"
                                             class="text-decoration-none text-black">{{ $post->name }}</a></p>
                                     <a href="{{ route('post.detail', ['postSlug' => $post->slug]) }}"
                                         class="mt-auto text-decoration-none fw-medium fst-italic text-dark-blue"><small>Xem
