@@ -1497,3 +1497,14 @@ figure figcaption::before {
         font-weight: 600 !important;
     }
 }
+
+#toc-sidebar #toggle-toc{
+    display: none !important;
+}
+
+@media (max-width: 768px){
+    .entry-content iframe{
+        width:100% !important;
+        height: 350px !important;
+    }
+}

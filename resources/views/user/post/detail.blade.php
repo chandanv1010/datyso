@@ -190,4 +190,41 @@
 @section('footer')
 
 
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const btn = document.getElementById("toggle-toc");
+    const lists = document.querySelectorAll(".toc-list");
+    const tocContent = document.getElementById("toc-content-wrapper");
+
+    // btn.addEventListener("click", function() {
+    //     lists.forEach(list => {
+    //         list.style.display = list.style.display === "none" ? "block" : "none";
+    //     });
+    //     btn.textContent = (btn.textContent === "Ẩn") ? "Hiện" : "Ẩn";
+    // });
+
+    btn.addEventListener("click", function() {
+        // Ẩn / hiện toàn bộ phần cây mục lục
+        if (tocContent.style.display === "none") {
+            tocContent.style.display = "block";
+            btn.textContent = "Ẩn";
+        } else {
+            tocContent.style.display = "none";
+            btn.textContent = "Hiện";
+        }
+    });
+
+    // Smooth scroll (jQuery)
+    $('a.toc-link').on('click', function(e) {
+        e.preventDefault();
+        let target = $(this).attr('href');
+        $('html, body').animate({
+            scrollTop: $(target).offset().top - 20
+        }, 500);
+    });
+});
+</script>
+
+
+
 @endsection

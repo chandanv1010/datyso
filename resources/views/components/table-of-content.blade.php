@@ -4,28 +4,7 @@
         <button id="toggle-toc" class="text-blue-600 text-sm hover:underline" style="background: transparent;border:0;">Ẩn</button>
     </div>
 
-    {!! \App\View\Components\TableOfContent::buildTree($items) !!}
+    <div id="toc-content-wrapper">
+        {!! \App\View\Components\TableOfContent::buildTree($items) !!}
+    </div>
 </div>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const btn = document.getElementById("toggle-toc");
-    const lists = document.querySelectorAll(".toc-list");
-
-    btn.addEventListener("click", function() {
-        lists.forEach(list => {
-            list.style.display = list.style.display === "none" ? "block" : "none";
-        });
-        btn.textContent = (btn.textContent === "Ẩn") ? "Hiện" : "Ẩn";
-    });
-
-    // Smooth scroll (jQuery)
-    $('a.toc-link').on('click', function(e) {
-        e.preventDefault();
-        let target = $(this).attr('href');
-        $('html, body').animate({
-            scrollTop: $(target).offset().top - 20
-        }, 500);
-    });
-});
-</script>

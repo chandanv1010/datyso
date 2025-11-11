@@ -487,7 +487,7 @@ class HomeController extends Controller
                     cutnchar(strip_tags($post->content), 300)
                 )
             )))),
-            'meta_image' => '',
+            'meta_image' => $post->image,
             'canonical' =>  route('post.detail', ['postSlug' => $post->slug]),
         ];
 
