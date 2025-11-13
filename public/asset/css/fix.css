@@ -1512,3 +1512,7 @@ figure figcaption::before {
         position: static !important;
     }
 }
+
+.fix-padding{
+    padding:10px !important;
+}

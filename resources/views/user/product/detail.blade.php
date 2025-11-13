@@ -178,7 +178,7 @@
                                 </div>
                                 <div class="tab-pane fade" id="video-tab-pane" role="tabpanel"
                                     aria-labelledby="disabled-tab" tabindex="0">
-                                    <div class="p-5">
+                                    <div class="fix-padding">
                                         @if ($product->video)
                                             <iframe class="embed-responsive-item"
                                                 src="{{ getYoutubeEmbedUrl($product->video) }}" allowfullscreen
