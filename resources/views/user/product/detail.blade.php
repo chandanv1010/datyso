@@ -178,13 +178,11 @@
                                 </div>
                                 <div class="tab-pane fade" id="video-tab-pane" role="tabpanel"
                                     aria-labelledby="disabled-tab" tabindex="0">
-                                    <div class="p-5" style="height: 100vh;">
+                                    <div class="p-5">
                                         @if ($product->video)
-                                            <div style="position: relative; width: 100%; height: 100%;">
-                                                <iframe class="embed-responsive-item"
-                                                    src="{{ getYoutubeEmbedUrl($product->video) }}" allowfullscreen
-                                                    style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;"></iframe>
-                                            </div>
+                                            <iframe class="embed-responsive-item"
+                                                src="{{ getYoutubeEmbedUrl($product->video) }}" allowfullscreen
+                                                style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;"></iframe>
                                         @endif
                                     </div>
                                 </div>
