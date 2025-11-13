@@ -1504,7 +1504,9 @@ figure figcaption::before {
 
 @media (max-width: 768px){
     .entry-content iframe{
-        width:100% !important;
-        height: 350px !important;
+        width: 100% !important;
+        height: auto !important;
+        display: block !important;
+        aspect-ratio: 16 / 9;
     }
 }
