@@ -1509,5 +1509,6 @@ figure figcaption::before {
         height: auto !important;
         display: block !important;
         aspect-ratio: 16 / 9 !important;
+        position: static !important;
     }
 }
