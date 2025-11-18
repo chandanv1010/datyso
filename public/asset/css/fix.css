@@ -1512,7 +1512,13 @@ figure figcaption::before {
         position: static !important;
     }
 }
+.embed-responsive-item{
+    width:80%;
+    position: static;
+    aspect-ratio: 16/9;
+}
 
 .fix-padding{
     padding:10px !important;
+    text-align: center;
 }
