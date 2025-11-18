@@ -1513,8 +1513,8 @@ figure figcaption::before {
     }
 }
 .embed-responsive-item{
-    width:80%;
-    position: static;
+    width:80% !important;
+    position: static !important;
     aspect-ratio: 16/9;
 }
 
