@@ -68,7 +68,7 @@ class HomeController extends Controller
             'meta_title' => $this->system['seo_meta_title'],
             'meta_keyword' => $this->system['seo_meta_keyword'],
             'meta_description' => $this->system['seo_meta_description'],
-            'meta_image' => $this->system['seo_meta_images'],
+            'meta_image' => getImageUrl($this->system['seo_meta_images']),
             'canonical' => config('app.url'),
         ];
 
