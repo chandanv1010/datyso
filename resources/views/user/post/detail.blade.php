@@ -92,7 +92,7 @@
                                 @endphp
                                 <x-share-social :model="$post" :shareLink="$shareLink" />
                                 <div class="google-news text-center">
-                                    Theo dõi chúng tôi trên <a href="{{ $system['seo_google_news'] }}" target="_blank"><img class="alignnone wp-image-405" src="{{ asset('asset/Google_News.webp') }}" alt="" width="141" height="26"></a>
+                                    Theo dõi chúng tôi trên <a href="{{ $system['seo_google_news'] ?? '#' }}" target="_blank"><img class="alignnone wp-image-405" src="{{ asset('asset/Google_News.webp') }}" alt="" width="141" height="26"></a>
                                 </div>
                             </div>
                         </div>

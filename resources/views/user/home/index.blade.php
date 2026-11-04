@@ -173,8 +173,19 @@
                         <p>- <strong>Hotline</strong>: {{ $item->hotline }}</p>
                         <p>- <strong>Email</strong>: {{ $item->email }}</p>
 
-                        <div class="map-container">
-                            {!! $item->map !!}
+                        <div class="map-container mt-3">
+                            @if(!empty($item->map))
+                                {!! $item->map !!}
+                            @else
+                                <iframe 
+                                    src="https://maps.google.com/maps?q={{ urlencode($item->address ?? $item->name) }}&t=&z=15&ie=UTF8&iwloc=&output=embed" 
+                                    width="100%" 
+                                    height="280" 
+                                    style="border:0; border-radius: 12px; width: 100%; height: 280px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);" 
+                                    allowfullscreen="" 
+                                    loading="lazy">
+                                </iframe>
+                            @endif
                         </div>
                     </div>
                 </div>

@@ -2,5 +2,3 @@
 /public/storage
 /vendor
 .env
-composer.json
-package-look.json

@@ -29,24 +29,26 @@
  */
 function CheckAuthentication()
 {
-	
-	// $cookieAuth = (isset($_COOKIE[AUTH.'Backend']) ? $_COOKIE[AUTH.'Backend']:'');
-	
-	//  if ( !isset($_COOKIE[AUTH.'Backend']) || empty($cookieAuth)) return false;
-	
-	
-	// WARNING : DO NOT simply return "true". By doing so, you are allowing
-	// "anyone" to upload and list the files in your server. You must implement
-	// some kind of session validation here. Even something very simple as...
+	// BẢO VỆ BẢO MẬT: Chỉ cho phép Admin đã đăng nhập vào CKFinder
+	$envPath = __DIR__ . '/../../../../.env';
+	$appKey = '';
+	if (file_exists($envPath)) {
+		$lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+		foreach ($lines as $line) {
+			if (strpos(trim($line), 'APP_KEY=') === 0) {
+				$appKey = trim(substr(trim($line), 8));
+				break;
+			}
+		}
+	}
 
-	// return isset($_SESSION['IsAuthorized']) && $_SESSION['IsAuthorized'];
+	$validToken = md5($appKey . '_ckfinder_auth_datyso');
+	if (isset($_COOKIE['ckfinder_auth']) && $_COOKIE['ckfinder_auth'] === $validToken) {
+		return true;
+	}
 
-	// ... where $_SESSION['IsAuthorized'] is set to "true" as soon as the
-	// user logs in your system. To be able to use session variables don't
-	// forget to add session_start() at the top of this file.
-
-
-	return true;
+	// Mặc định từ chối mọi truy cập trái phép
+	return false;
 }
 	// $cookieAuth = (isset($_COOKIE[AUTH.'Backend']) ? $_COOKIE[AUTH.'Backend']:'');
 	// $cookieAuth = json_decode($cookieAuth, true);

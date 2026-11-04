@@ -41,8 +41,15 @@ class HomeController extends Controller
         $this->system = $this->getSystem();
     }
 
-    private function getSystem(){
-        return convert_array(System::get(), 'keyword', 'content');
+        private function getSystem(){
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('systems')) {
+                return convert_array(System::get(), 'keyword', 'content');
+            }
+        } catch (\Throwable $e) {
+            // Tránh lỗi khi bảng systems chưa được tạo
+        }
+        return [];
     }
 
     public function index()
@@ -60,15 +67,15 @@ class HomeController extends Controller
 
         foreach ($mainContent as $category) {
             if ($category->image) {
-                $category->image = url("storage/images/$category->image");
+                $category->image = getImageUrl($category->image);
             }
         }
         // $system = 
         $seo = [
-            'meta_title' => $this->system['seo_meta_title'],
-            'meta_keyword' => $this->system['seo_meta_keyword'],
-            'meta_description' => $this->system['seo_meta_description'],
-            'meta_image' => getImageUrl($this->system['seo_meta_images']),
+            'meta_title' => $this->system['seo_meta_title'] ?? config('app.name', 'DATYSO'),
+            'meta_keyword' => $this->system['seo_meta_keyword'] ?? '',
+            'meta_description' => $this->system['seo_meta_description'] ?? '',
+            'meta_image' => !empty($this->system['seo_meta_images']) ? getImageUrl($this->system['seo_meta_images']) : '',
             'canonical' => config('app.url'),
         ];
 
@@ -317,7 +324,7 @@ class HomeController extends Controller
         $instructions = Instruction::where('status', 1)->orderBy('id', 'desc')->paginate(15);
         $products = Product::where('status', 1)->where('del_flg', 1)->with('categories')->inRandomOrder()->limit(3)->get();
         foreach($instructions as $instruction) {
-            $instruction->image = url('storage/images') . '/' . $instruction->image;
+            $instruction->image = getImageUrl($instruction->image);
         }
 
         
@@ -341,7 +348,7 @@ class HomeController extends Controller
 
         $newestInstructions = Instruction::where([['status', 1], ['id', '!=', $instruction->id]])->orderBy('updated_at', 'desc')->limit(5)->get();
         $products = Product::where('status', 1)->where('del_flg', 1)->with('categories')->inRandomOrder()->limit(3)->get();
-        $instruction->image = url('storage/images') . '/' . $instruction->image;
+        $instruction->image = getImageUrl($instruction->image);
 
         $seo = [
             'meta_title' => $instruction->name,
@@ -919,7 +926,7 @@ class HomeController extends Controller
     {
         foreach ($items as $item) {
             if ($item->$imageColumn) {
-                $item->$imageColumn = url("storage/images") . "/" . $item->$imageColumn;
+                $item->$imageColumn = getImageUrl($item->$imageColumn);
             }
         }
     }

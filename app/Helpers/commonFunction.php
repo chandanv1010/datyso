@@ -14,7 +14,17 @@ if (!function_exists('getYoutubeEmbedUrl')) {
 if (! function_exists('getImageUrl')) {
     function getImageUrl($image)
     {
-        return asset("storage/images/$image");
+        if (empty($image)) {
+            return asset('asset/images/Logo-shortcut.png');
+        }
+
+        // Nếu file ảnh đã có sẵn trong thư mục public/storage/images ở local
+        if (file_exists(public_path("storage/images/$image"))) {
+            return asset("storage/images/$image");
+        }
+
+        // Tự động load ảnh từ website thật datyso.com khi máy local chưa có file
+        return "https://datyso.com/storage/images/$image";
     }
 }
 

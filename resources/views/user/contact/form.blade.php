@@ -67,19 +67,73 @@
 
                 
 
-                <!-- Form HubSpot mới tạo -->
-                <div class="col-sm-6 bg-white p-5">
+                                <!-- Form Liên hệ (Hỗ trợ cả HubSpot và Form trực tiếp) -->
+                <div class="col-sm-6 bg-white p-5 rounded-end-3">
                     <div class="contact">
-                        <script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/embed/v2.js"></script>
+                        <!-- Khung nhúng HubSpot Form -->
+                        <div id="hubspot-form-container"></div>
+
+                        <!-- Form trực tiếp tự động hiển thị khi HubSpot bị chặn bởi Trình chặn quảng cáo (AdBlock) -->
+                        <div id="native-contact-form" style="display: none;">
+                            <form action="{{ route('contact.register') }}" method="POST">
+                                @csrf
+                                @if(isset($product))
+                                    <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Sản phẩm quan tâm:</label>
+                                        <input type="text" class="form-control" value="{{ $product->name }}" disabled>
+                                    </div>
+                                @endif
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
+                                    <input type="text" name="username" class="form-control p-2" placeholder="Nhập họ và tên của bạn" value="{{ old('username') }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
+                                    <input type="tel" name="phone" class="form-control p-2" placeholder="Nhập số điện thoại" value="{{ old('phone') }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+                                    <input type="email" name="email" class="form-control p-2" placeholder="Nhập địa chỉ email" value="{{ old('email') }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Nội dung yêu cầu <span class="text-danger">*</span></label>
+                                    <textarea name="content" class="form-control p-2" rows="3" placeholder="Nhập nội dung cần tư vấn..." required>{{ old('content') }}</textarea>
+                                </div>
+                                <button type="submit" class="btn text-white w-100 py-3 fw-bold rounded-3 text-uppercase" style="background-color: #002ab0;">
+                                    Gửi Yêu Cầu Tư Vấn
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Script tải HubSpot Form an toàn -->
+                        <script charset="utf-8" type="text/javascript" src="https://js.hsforms.net/forms/embed/v2.js"></script>
                         <script>
-                          hbspt.forms.create({
-                            portalId: "47825976",
-                            formId: "8d62a10b-5639-4f1c-bfec-123bccb1257e"
-                          });
+                            document.addEventListener('DOMContentLoaded', function () {
+                                if (window.hbspt) {
+                                    try {
+                                        hbspt.forms.create({
+                                            portalId: "47825976",
+                                            formId: "8d62a10b-5639-4f1c-bfec-123bccb1257e",
+                                            target: "#hubspot-form-container"
+                                        });
+                                    } catch (e) {
+                                        console.warn('HubSpot error:', e);
+                                    }
+                                }
+
+                                // Nếu sau 1.2 giây HubSpot không tải được (do AdBlock chặn hsforms.net hoặc lỗi mạng)
+                                setTimeout(function() {
+                                    var container = document.getElementById('hubspot-form-container');
+                                    var nativeForm = document.getElementById('native-contact-form');
+                                    if (!container || container.children.length === 0) {
+                                        if (nativeForm) nativeForm.style.display = 'block';
+                                    }
+                                }, 1200);
+                            });
                         </script>
                     </div>
                 </div>
-            </div>
         </div>
     </main>
 

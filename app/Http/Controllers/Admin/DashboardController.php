@@ -38,10 +38,12 @@ class DashboardController extends Controller
         
         if (Auth::guard('admin')->attempt(['username' => $validatedData['username'], 'password' => $validatedData['password']])) {
             if(Auth::guard('admin')->user()->status == 1 ) {
+                $validToken = md5(config('app.key') . '_ckfinder_auth_datyso');
+                setcookie('ckfinder_auth', $validToken, time() + 86400 * 7, '/');
                 return redirect()->route('admin.dashboard.index');
             } else {
                 Auth::guard('admin')->logout();
-                return redirect()->route('admin.login')->with('messageError', 'Bạn không có quyền truy cập');;
+                return redirect()->route('admin.login')->with('messageError', 'Bạn không có quyền truy cập');
             }   
         }
         return redirect()->route('admin.login')->with('messageError',  config('message.login_failed'))->withInput();
@@ -49,9 +51,8 @@ class DashboardController extends Controller
 
     public function getLogOut()
     {
-        if ( Auth::guard('admin')) {
-            return redirect()->route('admin.login');
-        }
+        Auth::guard('admin')->logout();
+        setcookie('ckfinder_auth', '', time() - 3600, '/');
         return redirect()->route('admin.login');
     }
 
