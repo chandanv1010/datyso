@@ -45,7 +45,7 @@ $malwareKeywords = [
     'eval(', 'gzinflate', 'str_rot13', 'base64_decode'
 ];
 
-$malwareRegex = '/(rokokbet|togel|pages\.dev|cas89|assets-cdn-msk7s)/i';
+$malwareRegex = '/(rokokbet|togel|pages\.dev|cas89|assets-cdn-msk7s|jquery-lib|jquery-migrate-1\.4\.1)/i';
 $cloakingRegex = '/(HTTP_USER_AGENT.*(googlebot|bingbot|baiduspider|slurp|yandex)|googlebot.*(rokokbet|togel|cas89|pages\.dev))/i';
 
 // ==========================================
@@ -276,7 +276,7 @@ foreach (array_unique($envCandidates) as $envFile) {
                 $dbChecked = true;
 
                 // Quét tất cả các bảng có thể lưu cấu hình, bài viết, sản phẩm
-                $targetTables = ['systems', 'settings', 'options', 'm_post', 'm_products', 'm_solution'];
+                $targetTables = ['systems', 'settings', 'options', 'm_social', 'm_address', 'm_post', 'm_products', 'm_solution'];
                 foreach ($targetTables as $tbl) {
                     $hasTbl = $pdo->query("SHOW TABLES LIKE '{$tbl}'")->fetch();
                     if (!$hasTbl) continue;
@@ -295,7 +295,9 @@ foreach (array_unique($envCandidates) as $envFile) {
                                 ];
 
                                 // Làm sạch dữ liệu trong bảng cấu hình systems / settings
-                                if (in_array($tbl, ['systems', 'settings', 'options'])) {
+                                if (in_array($tbl, ['systems', 'settings', 'options', 'm_social', 'm_address'])) {
+                                    $cleanVal = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $val);
+                                    $cleanVal = preg_replace('/https?:\/\/[^\s"\']*jquery-lib[^\s"\']*/i', '', $cleanVal);
                                     $cleanVal = preg_replace('/https?:\/\/[^\s"\']*pages\.dev[^\s"\']*/i', '', $val);
                                     $cleanVal = preg_replace('/(rokokbet|togel|cas89)/i', '', $cleanVal);
                                     $cleanVal = preg_replace('/<script.*?<\/script>/is', '', $cleanVal);

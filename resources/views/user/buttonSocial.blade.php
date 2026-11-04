@@ -35,7 +35,7 @@
         @foreach ($socials as $social)
             <button class="px-2 py-1 border-0 rounded-circle bg-transparent">
                 <a href="{{ $social->url }}" target="_blank" rel="noopener noreferrer">
-                    {!! $social->image !!}
+                    {!! preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $social->image) !!}
                 </a>
             </button>
         @endforeach

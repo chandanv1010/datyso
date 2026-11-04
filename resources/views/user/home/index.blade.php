@@ -197,7 +197,7 @@
     </div>
 @endsection
 @section('footer')
-    @include('user.buttonSocial')
+    
 
     <script>
          document.addEventListener('DOMContentLoaded', function () {

@@ -146,4 +146,4 @@
 @endsection
 @section('footer')
 @endsection
-@include('user.buttonSocial')
+
