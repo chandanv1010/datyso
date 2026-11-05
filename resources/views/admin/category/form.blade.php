@@ -309,7 +309,7 @@
             }
         }
 
-            function handleFileChange(input, previewSelector, checkSelector) {
+        function handleFileChange(input, previewSelector, checkSelector) {
             if (input.files && input.files[0]) {
                 var reader = new FileReader();
                 reader.onload = function (e) {
@@ -326,23 +326,9 @@
             $(checkSelector).val('0');
         }
     </script>
-    <script src="https://cdn.tiny.cloud/1/pzn93bm0siit4expzgq6iwujj6bwzals3yvy416i2glwpq0f/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.6.0/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="{{ asset('asset/js/tinymce.js') }}"></script>
     <script>
-        if (typeof tinymce !== 'undefined') {
-            tinymce.init({
-                selector: 'textarea.editor-area',
-                language: 'vi',
-                plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount linkchecker',
-                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
-                height: 380,
-                setup: function(editor) {
-                    editor.on('change keyup', function () {
-                        editor.save();
-                    });
-                }
-            });
-        }
-
         function updateCategorySerp() {
             const titleVal = $('#seo_title').val() || $('#name').val() || 'Tiêu đề danh mục - DATYSO';
             const descVal = $('#seo_description').val() || $('#short_desc').val() || 'Mô tả danh mục sản phẩm chính hãng tại Datyso...';

@@ -160,7 +160,7 @@
     </div>
 @endsection
 @section('footer')
-    <script src="https://cdn.tiny.cloud/1/pzn93bm0siit4expzgq6iwujj6bwzals3yvy416i2glwpq0f/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.6.0/tinymce.min.js" referrerpolicy="origin"></script>
     <script src=" {{ asset('asset/js/tinymce.js') }}"></script>
 
     <script src="{{ asset('asset/js/datatable.js') }}"></script>
