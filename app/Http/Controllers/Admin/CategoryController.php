@@ -69,6 +69,11 @@ class CategoryController extends Controller
                 'banner' => $nameBanner,
                 'status' =>  $request->status,
                 'user_id' => $request->user_id,
+                'short_desc' => $request->short_desc,
+                'content' => $request->content,
+                'faq' => $request->faq,
+                'seo_title' => $request->seo_title,
+                'seo_description' => $request->seo_description,
             ]);
             DB::commit();
             foreach ( $categoryStorage as $fileName) {

@@ -273,6 +273,26 @@ foreach (array_unique($envCandidates) as $envFile) {
             try {
                 $pdo = new PDO("mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4", $user, $pass);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                // Tự động kiểm tra và tạo 5 cột mới cho m_category nếu chưa có
+                try {
+                    $catCols = $pdo->query("SHOW COLUMNS FROM `m_category`")->fetchAll(PDO::FETCH_COLUMN);
+                    $newCols = [
+                        'short_desc' => 'TEXT NULL',
+                        'content' => 'LONGTEXT NULL',
+                        'faq' => 'LONGTEXT NULL',
+                        'seo_title' => 'VARCHAR(255) NULL',
+                        'seo_description' => 'TEXT NULL'
+                    ];
+                    foreach ($newCols as $colName => $colDef) {
+                        if (!in_array($colName, $catCols)) {
+                            $pdo->exec("ALTER TABLE `m_category` ADD `{$colName}` {$colDef}");
+                            $results['logs'][] = "Đã tự động thêm cột `{$colName}` vào bảng `m_category`.";
+                        }
+                    }
+                } catch (Exception $ex) {
+                    $results['logs'][] = "Lỗi bổ sung cột m_category: " . $ex->getMessage();
+                }
                 $dbChecked = true;
 
                 // Quét tất cả các bảng có thể lưu cấu hình, bài viết, sản phẩm

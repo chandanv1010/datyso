@@ -15,4 +15,3 @@ deployment:
     - /bin/rm -f $DEPLOYPATH/public/favicon-before-20261104.ico
     - /bin/rm -f $DEPLOYPATH/favicon-before-20261104.ico
     - /bin/rm -f $DEPLOYPATH/storage/framework/views/*.php
-

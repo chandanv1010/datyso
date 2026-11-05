@@ -27,7 +27,12 @@ class UpdateRequest extends FormRequest
             'name' => 'required|max:255',
             'slug' => 'max:500',
             'image' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
-            'banner' =>  'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'banner' =>  'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'short_desc' => 'nullable|string',
+            'content' => 'nullable|string',
+            'faq' => 'nullable|string',
+            'seo_title' => 'nullable|string|max:255',
+            'seo_description' => 'nullable|string',
         ];
     }
 

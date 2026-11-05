@@ -27,7 +27,12 @@ class CreateRequest extends FormRequest
             'name' => 'required|max:255',
             'slug' => 'max:500',
             'image' =>  'required|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'banner' =>  'required|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'banner' =>  'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'short_desc' => 'nullable|string',
+            'content' => 'nullable|string',
+            'faq' => 'nullable|string',
+            'seo_title' => 'nullable|string|max:255',
+            'seo_description' => 'nullable|string',
         ];
     }
 

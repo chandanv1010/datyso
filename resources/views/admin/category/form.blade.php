@@ -112,6 +112,90 @@
                         <p class="help is-danger text-danger">{{ $errors->first('banner') }}</p>
                     </div>
                 </div>
+                <!-- 1. Đoạn mở đầu dưới H1 -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="short_desc" class="form-label fw-bold">1. Đoạn mở đầu (Hiển thị ngay dưới tiêu đề H1 danh mục)</label>
+                        <textarea class="form-control" id="short_desc" name="short_desc" rows="3"
+                            placeholder="Nhập 1 - 3 câu mở đầu giới thiệu danh mục, hiển thị nổi bật dưới H1...">{{ old('short_desc') ?? (isset($category) ? $category->short_desc : '') }}</textarea>
+                        <div class="form-text text-muted">Đoạn văn ngắn làm rõ chủ đề danh mục ngay dưới tiêu đề H1, tăng trải nghiệm người dùng và điểm SEO on-page.</div>
+                        <p class="help is-danger text-danger">{{ $errors->first('short_desc') }}</p>
+                    </div>
+                </div>
+
+                <!-- 2. Nội dung dài dưới lưới sản phẩm -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="content" class="form-label fw-bold">2. Nội dung dài (Hiển thị dưới lưới sản phẩm)</label>
+                        <textarea id="editor-content" class="form-control editor-area" name="content" rows="10"
+                            placeholder="Nội dung chi tiết, đánh giá, bảng thông số, hướng dẫn chọn mua...">{{ old('content') ?? (isset($category) ? $category->content : '') }}</textarea>
+                        <div class="form-text text-muted">Bài viết chi tiết chuẩn SEO nằm bên dưới danh sách sản phẩm. Hỗ trợ định dạng H2, H3, bảng biểu, hình ảnh.</div>
+                        <p class="help is-danger text-danger">{{ $errors->first('content') }}</p>
+                    </div>
+                </div>
+
+                <!-- 3. FAQ Câu hỏi thường gặp -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="faq" class="form-label fw-bold">3. Câu hỏi thường gặp (FAQ)</label>
+                        <textarea id="editor-faq" class="form-control editor-area" name="faq" rows="8"
+                            placeholder="Các câu hỏi & câu trả lời thường gặp của khách hàng về dòng sản phẩm này...">{{ old('faq') ?? (isset($category) ? $category->faq : '') }}</textarea>
+                        <div class="form-text text-muted">Khối FAQ hiển thị ở khối riêng cuối trang, tự động kích hoạt Schema FAQPage trên Google.</div>
+                        <p class="help is-danger text-danger">{{ $errors->first('faq') }}</p>
+                    </div>
+                </div>
+
+                <!-- 4 & 5. Cấu hình SEO riêng -->
+                <div class="card mb-4 border-primary border-opacity-25 shadow-sm">
+                    <div class="card-header bg-primary text-white fw-bold d-flex align-items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-search me-2" viewBox="0 0 16 16">
+                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                        </svg>
+                        4 & 5. CẤU HÌNH SEO RIÊNG CHO DANH MỤC
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <label for="seo_title" class="form-label fw-bold">SEO Title riêng</label>
+                                <span class="text-muted small" id="seo-title-count">0 / 65 ký tự (Khuyên dùng: 50 - 65)</span>
+                            </div>
+                            <input type="text" class="form-control" id="seo_title" name="seo_title"
+                                placeholder="VD: Máy Hàn Laser Cầm Tay Chính Hãng Giá Tốt Nhất 2026 | Datyso"
+                                value="{{ old('seo_title') ?? (isset($category) ? $category->seo_title : '') }}">
+                            <div class="form-text text-muted">Nếu để trống, hệ thống sẽ tự động dùng Tên danh mục làm tiêu đề trang.</div>
+                            <p class="help is-danger text-danger">{{ $errors->first('seo_title') }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <label for="seo_description" class="form-label fw-bold">Meta Description riêng</label>
+                                <span class="text-muted small" id="seo-desc-count">0 / 160 ký tự (Khuyên dùng: 140 - 160)</span>
+                            </div>
+                            <textarea class="form-control" id="seo_description" name="seo_description" rows="3"
+                                placeholder="VD: Datyso phân phối máy hàn laser cầm tay chất lượng cao, mối hàn ngấu đẹp, tốc độ nhanh gấp 5-10 lần hàn TIG/MIG. Bảo hành 24 tháng tận nơi.">{{ old('seo_description') ?? (isset($category) ? $category->seo_description : '') }}</textarea>
+                            <div class="form-text text-muted">Đoạn mô tả ngắn hiển thị trên kết quả tìm kiếm Google.</div>
+                            <p class="help is-danger text-danger">{{ $errors->first('seo_description') }}</p>
+                        </div>
+
+                        <!-- Google Snippet Preview -->
+                        <div class="p-3 bg-light rounded border">
+                            <div class="text-muted small mb-2 fw-bold text-uppercase">Xem trước kết quả tìm kiếm Google (SERP Preview):</div>
+                            <div style="font-family: Arial, sans-serif;">
+                                <div style="font-size: 14px; color: #202124;" class="d-flex align-items-center">
+                                    <img src="{{ url('asset/images/Logo-shortcut.png') }}" style="width: 16px; height: 16px; margin-right: 6px;">
+                                    <span>datyso.com</span>
+                                    <span style="color: #5f6368; margin-left: 4px;">› san-pham › <span id="serp-slug">{{ isset($category) ? $category->slug : 'danh-muc' }}</span></span>
+                                </div>
+                                <div id="serp-title" style="font-size: 18px; color: #1a0dab; font-weight: 400; line-height: 1.3; cursor: pointer;" class="mt-1">
+                                    {{ !empty($category->seo_title) ? $category->seo_title : (isset($category) ? $category->name . ' - DATYSO' : 'Tiêu đề danh mục - DATYSO') }}
+                                </div>
+                                <div id="serp-desc" style="font-size: 13px; color: #4d5156; line-height: 1.4;" class="mt-1">
+                                    {{ !empty($category->seo_description) ? $category->seo_description : 'Mô tả danh mục sản phẩm chính hãng tại Datyso...' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row mb-3">
                     <div class="col-6">
                         <label for="status" class="form-label">Trạng thái<span class="text-danger">*</span></label>
@@ -241,5 +325,43 @@
             $(previewSelector).attr('src', defaultImage).fadeIn('slow');
             $(checkSelector).val('0');
         }
+    </script>
+    <script src="https://cdn.tiny.cloud/1/pzn93bm0siit4expzgq6iwujj6bwzals3yvy416i2glwpq0f/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        if (typeof tinymce !== 'undefined') {
+            tinymce.init({
+                selector: 'textarea.editor-area',
+                language: 'vi',
+                plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount linkchecker',
+                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
+                height: 380,
+                setup: function(editor) {
+                    editor.on('change keyup', function () {
+                        editor.save();
+                    });
+                }
+            });
+        }
+
+        function updateCategorySerp() {
+            const titleVal = $('#seo_title').val() || $('#name').val() || 'Tiêu đề danh mục - DATYSO';
+            const descVal = $('#seo_description').val() || $('#short_desc').val() || 'Mô tả danh mục sản phẩm chính hãng tại Datyso...';
+            const slugVal = $('#slug').val() || 'danh-muc';
+
+            const titleLen = ($('#seo_title').val() || '').length;
+            const descLen = ($('#seo_description').val() || '').length;
+
+            $('#seo-title-count').text(titleLen + ' / 65 ký tự' + (titleLen > 65 ? ' (Hơi dài)' : ''));
+            $('#seo-desc-count').text(descLen + ' / 160 ký tự' + (descLen > 160 ? ' (Hơi dài)' : ''));
+
+            $('#serp-title').text(titleVal);
+            $('#serp-desc').text(descVal);
+            $('#serp-slug').text(slugVal);
+        }
+
+        $('#seo_title, #seo_description, #name, #slug, #short_desc').on('input keyup change', updateCategorySerp);
+        $(document).ready(function() {
+            updateCategorySerp();
+        });
     </script>
 @endsection

@@ -128,17 +128,22 @@ class HomeController extends Controller
 
         $products = $category->products()->with(['images'])->where('del_flg', 1)->paginate(15);
 
+        $seoTitle = !empty($category->seo_title) ? $category->seo_title : $category->name;
+        $seoDesc = !empty($category->seo_description) 
+            ? $category->seo_description 
+            : (!empty($category->short_desc) ? \Illuminate\Support\Str::limit(strip_tags($category->short_desc), 160) : $category->name);
+
         $seo = [
-            'meta_title' => $category->name,
+            'meta_title' => $seoTitle,
             'meta_keyword' => '',
-            'meta_description' => $category->name,
+            'meta_description' => $seoDesc,
             'meta_image' => getImageUrl($category->image),
             'canonical' => route('product.list', ['categorySlug' => $category->slug]),
         ];
 
-        $cat_name = $category->name;
+        $cat_name = $seoTitle;
         $cat_canonical = route('product.list', ['categorySlug' => $category->slug]);
-        $cat_description = $category->name;
+        $cat_description = $seoDesc;
         $totalProducts = $products->total();
         $itemListElements = '';
         $position = 1;
