@@ -348,6 +348,11 @@
         $('#seo_title, #seo_description, #name, #slug, #short_desc').on('input keyup change', updateCategorySerp);
         $(document).ready(function() {
             updateCategorySerp();
+            $('#category-form').on('submit', function() {
+                if (typeof tinymce !== 'undefined') {
+                    tinymce.triggerSave();
+                }
+            });
         });
     </script>
 @endsection

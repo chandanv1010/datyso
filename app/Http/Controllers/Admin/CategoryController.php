@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
@@ -35,6 +36,7 @@ class CategoryController extends Controller
      */
     public function create()
     {
+        $this->ensureCategoryColumns();
         $categories = Category::where('parent_id', null)->get();
         return view('admin.category.form', ['categories' => $categories, 'isUpdate' => false]);
     }
@@ -44,6 +46,7 @@ class CategoryController extends Controller
      */
     public function store(CreateRequest $request)
     {
+        $this->ensureCategoryColumns();
         if ($request->parent_id) {
             $parentCategory = Category::where([['id', $request->parent_id], ['status', 1]])->first();
             if (!$parentCategory) {
@@ -92,6 +95,7 @@ class CategoryController extends Controller
      */
     public function edit(string $id)
     {
+        $this->ensureCategoryColumns();
         $category = Category::findOrFail($id);
         if (!$category) return redirect()->route('admin.category.index')->with('messageError', config('message.data_not_found'));
         $categories = [];
@@ -112,6 +116,7 @@ class CategoryController extends Controller
      */
     public function update(UpdateRequest $request, string $id)
     {
+        $this->ensureCategoryColumns();
         if ($request->parent_id) {
             $parentCategory = Category::where([['id', $request->parent_id], ['parent_id', null]])->first();
             if (!$parentCategory) return redirect()->route('admin.category.update', $id)->with('messageError', 'Danh mục bạn chọn đã thuộc danh mục khác hoặc không tồn tại.');
@@ -154,28 +159,58 @@ class CategoryController extends Controller
 
             DB::commit();
 
-            if ($request->has('image')) {
-                $request->image->storeAs('images', $nameImg, 'public');
+            if ($request->has('image') && isset($image)) {
+                $image->storeAs('images', $nameImg, 'public');
 
-            // Delete image in firestorage
-            unlink($oldPath);
+                if ($oldPath && file_exists(public_path('storage/images/' . $oldPath))) {
+                    @unlink(public_path('storage/images/' . $oldPath));
+                }
             }
 
-            if ($request->has('banner')) {
-                $request->banner->storeAs('images', $nameBanner, 'public');
+            if ($request->has('banner') && isset($banner)) {
+                $banner->storeAs('images', $nameBanner, 'public');
 
-            // Delete image in firestorage
-            $path = url('storage/images/'. '/' . $$oldBanner);
-            if (file_exists($path)) {
-                unlink($path);
+                if ($oldBanner && file_exists(public_path('storage/images/' . $oldBanner))) {
+                    @unlink(public_path('storage/images/' . $oldBanner));
+                }
             }
-        }
 
             return redirect()->route('admin.category.index')->with('messageSuccess', config('message.update_success'));
         } catch(Throwable $th) {
             DB::rollback();
             Log::error($th);
             return redirect()->route('admin.category.update', $id)->with('messageError', config('message.update_failed'));
+        }
+    }
+
+    /**
+     * Tự động kiểm tra và thêm các cột mở rộng SEO/TinyMCE vào bảng m_category nếu chưa có.
+     * Đảm bảo tính tương thích và tự lành (self-healing) hoạt động mượt mà trên cả Local và Hosting.
+     */
+    private function ensureCategoryColumns(): void
+    {
+        try {
+            if (!Schema::hasColumn('m_category', 'short_desc')) {
+                Schema::table('m_category', function ($table) {
+                    if (!Schema::hasColumn('m_category', 'short_desc')) {
+                        $table->text('short_desc')->nullable()->after('name');
+                    }
+                    if (!Schema::hasColumn('m_category', 'content')) {
+                        $table->longText('content')->nullable()->after('short_desc');
+                    }
+                    if (!Schema::hasColumn('m_category', 'faq')) {
+                        $table->longText('faq')->nullable()->after('content');
+                    }
+                    if (!Schema::hasColumn('m_category', 'seo_title')) {
+                        $table->string('seo_title', 255)->nullable()->after('banner');
+                    }
+                    if (!Schema::hasColumn('m_category', 'seo_description')) {
+                        $table->text('seo_description')->nullable()->after('seo_title');
+                    }
+                });
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Could not auto-migrate category columns: ' . $e->getMessage());
         }
     }
 
