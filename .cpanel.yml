@@ -12,6 +12,7 @@ deployment:
     - /bin/cp composer.json $DEPLOYPATH
     - /bin/cp composer.lock $DEPLOYPATH
     - /bin/cp -f .htaccess $DEPLOYPATH/.htaccess
+    - /bin/cp -f public/.htaccess $DEPLOYPATH/public/.htaccess
     - /bin/rm -f $DEPLOYPATH/resources/views/user/main-before-favicon-20261104.blade.php
     - /bin/rm -f $DEPLOYPATH/public/favicon-before-20261104.ico
     - /bin/rm -f $DEPLOYPATH/favicon-before-20261104.ico

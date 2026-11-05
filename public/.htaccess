@@ -9,7 +9,21 @@
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # Redirect Trailing Slashes If Not A Folder (301 về URL chuẩn, không bao giờ qua /public/)...
+    # 1. Nếu request trực tiếp vào /public/ hoặc /public, 301 về trang chủ /
+    RewriteCond %{THE_REQUEST} \s/+public/?[\s?] [NC]
+    RewriteRule ^ / [L,R=301]
+
+    # 2. Nếu request trực tiếp có /public/... kèm dấu "/" cuối, 301 một bước về URL chuẩn (không /public/ và không "/")
+    RewriteCond %{THE_REQUEST} \s/+public/(.+?)/+[\s?] [NC]
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ /%1 [L,R=301]
+
+    # 3. Nếu request trực tiếp có tiền tố /public/, 301 về URL chuẩn không có /public/
+    RewriteCond %{THE_REQUEST} \s/+public/([^\s?]*) [NC]
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ /%1 [L,R=301]
+
+    # 4. Redirect Trailing Slashes If Not A Folder (301 một bước về URL chuẩn không có "/" ở cuối)...
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} !^/+$
     RewriteCond %{REQUEST_URI} ^(?:/public)?/(.+?)/+$

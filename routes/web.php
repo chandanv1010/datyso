@@ -192,7 +192,7 @@ Route::middleware([Views::class])->group(function () {
         Route::get('/tim-kiem', 'search')->name('search');
     
         Route::prefix('san-pham')->name('product.')->group(function () {
-            Route::get('/{categorySlug}/', 'getProductList')->name('list');
+            Route::get('/{categorySlug}', 'getProductList')->name('list');
             Route::get('/{categorySlug}/chi-tiet/{productSlug}', 'getProductDetail')->name('detail');
         });
     

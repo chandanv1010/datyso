@@ -1,0 +1,6 @@
+{
+  "terminal.integrated.env.windows": {
+    "PATH": "C:\\laragon\\bin\\php\\php-8.3.36-Win32-vs16-x64;C:\\laragon\\bin\\composer;${env:PATH}"
+  }
+}
+
