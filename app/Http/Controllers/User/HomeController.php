@@ -145,69 +145,65 @@ class HomeController extends Controller
         $cat_canonical = route('product.list', ['categorySlug' => $category->slug]);
         $cat_description = $seoDesc;
         $totalProducts = $products->total();
-        $itemListElements = '';
+
+        $productListItems = [];
         $position = 1;
 
         foreach ($products as $product) {
-            $image = getImageUrl($product->images->first()->image);
+            $image = ($product->images && $product->images->first()) ? getImageUrl($product->images->first()->image) : '';
             $name = $product->name;
             $canonical = route('product.detail', ['categorySlug' => $category->slug, 'productSlug' => $product->slug]);
-            $itemListElements .= "
-                {
-                    \"@type\": \"ListItem\",
-                    \"position\": $position,
-                    \"item\": {
-                        \"@type\": \"Product\",
-                        \"name\": \"" . $name . "\",
-                        \"url\": \"" . $canonical .  "\",
-                        \"image\": \"" . $image .  "\"
-                    }
-                },";
+            $productListItems[] = [
+                '@type' => 'ListItem',
+                'position' => $position,
+                'item' => [
+                    '@type' => 'Product',
+                    'name' => $name,
+                    'url' => $canonical,
+                    'image' => $image,
+                ],
+            ];
             $position++;
         }
 
-        $itemListElements = rtrim($itemListElements, ',');
-        $itemBreadcrumbElements = '';
-        $positionBreadcrumb = 2;
-        $itemBreadcrumbElements .= "
-            {
-                \"@type\": \"ListItem\",
-                \"position\": $positionBreadcrumb,
-                \"name\": \"" . $cat_name . "\",
-                \"item\": \"" . $cat_canonical . "\",
-            },";
+        // Tạo cấu trúc JSON-LD chuẩn RFC 8259: bọc mảng [BreadcrumbList, CollectionPage], không có dấu phẩy thừa
+        $jsonLdData = [
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 1,
+                        'name' => 'Trang chủ',
+                        'item' => config('app.url'),
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 2,
+                        'name' => $cat_name,
+                        'item' => $cat_canonical,
+                    ],
+                ],
+            ],
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'CollectionPage',
+                'name' => $cat_name,
+                'description' => $cat_description,
+                'url' => $cat_canonical,
+                'mainEntity' => [
+                    '@type' => 'ItemList',
+                    'name' => $cat_name,
+                    'numberOfItems' => $totalProducts,
+                    'itemListElement' => $productListItems,
+                ],
+            ],
+        ];
 
-        $itemBreadcrumbElements = rtrim($itemBreadcrumbElements, ',');
-
-        $schema = "<script type='application/ld+json'>
-            {
-                \"@type\": \"BreadcrumbList\",
-                \"itemListElement\": [
-                    {
-                        \"@type\": \"ListItem\",
-                        \"position\": 1,
-                        \"name\": \" Trang chủ  \",
-                        \"item\": \" ". config('app.url') . " \"
-                    },
-                    $itemBreadcrumbElements
-                ]
-            },
-            {
-                \"@context\": \"https://schema.org\",
-                \"@type\": \"CollectionPage\",
-                \"name\": \"" . $cat_name . "\",
-                \"description\": \" " . $cat_description . " \",
-                \"url\": \"" . $cat_canonical . "\",
-                \"mainEntity\": {
-                    \"@type\": \"ItemList\",
-                    \"name\": \" " .$cat_name. " \",
-                    \"numberOfItems\": $totalProducts,
-                    \"itemListElement\": [
-                        $itemListElements
-                    ]
-                }
-            }
-            </script>";
+        $schema = "<script type=\"application/ld+json\">\n"
+            . json_encode($jsonLdData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n"
+            . "</script>";
 
         return view('user.product.list', ['category' => $category, 'products' => $products, 'seo' => $seo, 'schema' => $schema]);
     }
@@ -256,69 +252,67 @@ class HomeController extends Controller
 
         $positionBreadcrumb = 2;
 
-        $itemListElements = '';
+        $jsonLdData = [
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 1,
+                        'name' => 'Trang chủ',
+                        'item' => config('app.url'),
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 2,
+                        'name' => $cat_name,
+                        'item' => $cat_canonical,
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 3,
+                        'name' => $name,
+                        'item' => $canonical,
+                    ],
+                ],
+            ],
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'Product',
+                'name' => $name,
+                'description' => $description,
+                'image' => $image,
+                'brand' => [
+                    '@type' => 'Brand',
+                    'name' => 'DATYSO',
+                ],
+                'manufacturer' => [
+                    '@type' => 'Organization',
+                    'name' => 'DATYSO',
+                    'url' => config('app.url'),
+                ],
+                'material' => $cat_name,
+                'category' => $cat_canonical,
+                'sku' => (string) $product->id,
+                'mpn' => (string) $product->id,
+                'offers' => [
+                    '@type' => 'Offer',
+                    'price' => !empty($product->price) ? (string) $product->price : '0',
+                    'priceCurrency' => 'VND',
+                    'availability' => 'https://schema.org/InStock',
+                    'seller' => [
+                        '@type' => 'Organization',
+                        'name' => 'DATYSO',
+                    ],
+                    'itemCondition' => 'https://schema.org/NewCondition',
+                ],
+            ],
+        ];
 
-        $itemListElements = rtrim($itemListElements, ',');
-        $itemBreadcrumbElements = '';
-        $positionBreadcrumb = 2;
-        $itemBreadcrumbElements .= "
-            {
-                \"@type\": \"ListItem\",
-                \"position\": $positionBreadcrumb,
-                \"name\": \"" . $cat_name . "\",
-                \"item\": \"" . $cat_canonical . "\",
-            },";
-
-        $itemBreadcrumbElements = rtrim($itemBreadcrumbElements, ',');
-
-        $schema = "
-            <script type=\"application/ld+json\">
-                {
-                    \"@type\": \"BreadcrumbList\",
-                    \"itemListElement\": [
-                        {
-                            \"@type\": \"ListItem\",
-                            \"position\": 1,
-                            \"name\": \" Trang chủ  \",
-                            \"item\": \" ". config('app.url') . " \"
-                        },
-                        $itemBreadcrumbElements
-                    ]
-                },
-                {
-                    \"@context\": \"https://schema.org\",
-                    \"@type\": \"Product\",
-                    \"name\": \" " . $name .  " \",
-                    \"description\": \"  " . $description .  "  \",
-                    \"image\": \"  " . $image .  "  \",
-                    \"brand\": {
-                        \"@type\": \"Brand\",
-                        \"name\": \"An Hưng\"
-                    },
-                    \"manufacturer\": {
-                        \"@type\": \"Organization\",
-                        \"name\": \"An Hưng\",
-                        \"url\": \" " . config('app.url') . "\"
-                    },
-                    \"material\": \" " .$cat_name. " \",
-                    \"category\": \" " .$cat_canonical. " \",
-                    \"sku\": \"\",
-                    \"mpn\": \"\",
-                    \"offers\": {
-                        \"@type\": \"Offer\",
-                        \"price\": \"\",
-                        \"priceCurrency\": \"\",
-                        \"availability\": \"\",
-                        \"seller\": {
-                            \"@type\": \"Organization\",
-                            \"name\": \"An Hưng\"
-                        },
-                        \"priceValidUntil\": \"\",
-                        \"itemCondition\": \"https://schema.org/NewCondition\"
-                    },
-                }
-            </script>
-        ";
+        $schema = "<script type=\"application/ld+json\">\n"
+            . json_encode($jsonLdData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n"
+            . "</script>";
 
         $system = $this->system;
         return view('user.product.detail', ['system' => $system, 'category' => $category, 'product' => $product, 'otherProducts' => $otherProducts, 'seo' => $seo, 'schema' => $schema]);
@@ -385,72 +379,55 @@ class HomeController extends Controller
 
         $catCanonical = config('app.url').'chinh-sach';
 
-        $itemBreadcrumbElements .= "
-            {
-                \"@type\": \"ListItem\",
-                \"position\": $positionBreadcrumb,
-                \"name\": \"" . $name . "\",
-                \"item\": \"" . $canonical . "\",
-            },";
+        $jsonLdData = [
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 1,
+                        'name' => 'Trang chủ',
+                        'item' => config('app.url'),
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 2,
+                        'name' => 'Chính sách',
+                        'item' => $catCanonical,
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 3,
+                        'name' => $name,
+                        'item' => $canonical,
+                    ],
+                ],
+            ],
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'Article',
+                'headline' => $name,
+                'description' => $description,
+                'image' => $image,
+                'url' => $canonical,
+                'datePublished' => convertDateTime($instruction->created_at, 'Y-m-d'),
+                'dateModified' => convertDateTime($instruction->updated_at ?? $instruction->created_at, 'Y-m-d'),
+                'publisher' => [
+                    '@type' => 'Organization',
+                    'name' => 'DATYSO',
+                    'url' => config('app.url'),
+                ],
+                'mainEntityOfPage' => [
+                    '@type' => 'WebPage',
+                    '@id' => $canonical,
+                ],
+            ],
+        ];
 
-        $itemBreadcrumbElements = rtrim($itemBreadcrumbElements, ',');
-
-        $schema = "
-            <script type=\"application/ld+json\">
-                {
-                    \"@type\": \"BreadcrumbList\",
-                    \"itemListElement\": [
-                        {
-                            \"@type\": \"ListItem\",
-                            \"position\": 1,
-                            \"name\": \" Trang chủ  \",
-                            \"item\": \" ". config('app.url') . " \"
-                        },
-                        $itemBreadcrumbElements
-                    ]
-                },
-                {
-                    \"@context\": \"https://schema.org\",
-                    \"@type\": \"BlogPosting\",
-                    \"headline\": \" " . $name .  " \",
-                    \"description\": \"  " . $description .  "  \",
-                    \"image\": \"  " . $image .  "  \",
-                    \"url\": \"  " . $canonical .  "  \",
-                    \"datePublished\": \"  " . convertDateTime($instruction->created_at, 'd-m-y') .  "  \",
-                    \"dateModified\": \"  " . convertDateTime($instruction->created_at, 'd-m-y') .  "  \",
-                    \"author\": [
-                        \"@type\": \"Person\",
-                        \"name\": \"\",
-                        \"url\": \"\",
-                    ],
-                    \"publisher\": [
-                        \"@type\": \"Organization\",
-                        \"name\": \" An Hưng  \",
-                        \"logo\": [
-                            \"@type\": \"ImageObject\",
-                            \"url\": \"   \",
-                        ],
-                    ],
-                    \"mainEntityOfPage\": [
-                        \"@type\": \"Organization\",
-                        \"@id\": \" " . $canonical . " \",
-                    ],
-                    \"articleSection\": \"  " . $tintuc = 'Tin tức' .  "  \",
-                    \" keywords \": \"  \",
-                    \" timeRequired \": \"  \",
-                    \"about\": [
-                        \"@type\": \"Thing\",
-                        \"name\": \" \",
-                    ],
-                    \"mentions\": [
-                        {
-                            \"@type\": \"Product\",
-                            \"name\": \" \",
-                        }
-                    ],
-                }
-            </script>
-        ";
+        $schema = "<script type=\"application/ld+json\">\n"
+            . json_encode($jsonLdData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n"
+            . "</script>";
 
 
         return view('user.instruction.detail', ['instruction' => $instruction, 'newestInstructions' => $newestInstructions, 'products' => $products, 'schema' => $schema, 'seo' => $seo]);
@@ -519,72 +496,55 @@ class HomeController extends Controller
 
         $catCanonical = config('app.url').'tin-tuc';
 
-        $itemBreadcrumbElements .= "
-            {
-                \"@type\": \"ListItem\",
-                \"position\": $positionBreadcrumb,
-                \"name\": \"" . $name . "\",
-                \"item\": \"" . $canonical . "\",
-            },";
+        $jsonLdData = [
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 1,
+                        'name' => 'Trang chủ',
+                        'item' => config('app.url'),
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 2,
+                        'name' => 'Tin tức',
+                        'item' => $catCanonical,
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 3,
+                        'name' => $post->name,
+                        'item' => $canonical,
+                    ],
+                ],
+            ],
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BlogPosting',
+                'headline' => $post->name,
+                'description' => $description,
+                'image' => $image,
+                'url' => $canonical,
+                'datePublished' => convertDateTime($post->created_at, 'Y-m-d'),
+                'dateModified' => convertDateTime($post->updated_at ?? $post->created_at, 'Y-m-d'),
+                'publisher' => [
+                    '@type' => 'Organization',
+                    'name' => 'DATYSO',
+                    'url' => config('app.url'),
+                ],
+                'mainEntityOfPage' => [
+                    '@type' => 'WebPage',
+                    '@id' => $canonical,
+                ],
+            ],
+        ];
 
-        $itemBreadcrumbElements = rtrim($itemBreadcrumbElements, ',');
-
-        $schema = "
-            <script type=\"application/ld+json\">
-                {
-                    \"@type\": \"BreadcrumbList\",
-                    \"itemListElement\": [
-                        {
-                            \"@type\": \"ListItem\",
-                            \"position\": 1,
-                            \"name\": \" Trang chủ  \",
-                            \"item\": \" ". config('app.url') . " \"
-                        },
-                        $itemBreadcrumbElements
-                    ]
-                },
-                {
-                    \"@context\": \"https://schema.org\",
-                    \"@type\": \"BlogPosting\",
-                    \"headline\": \" " . $name .  " \",
-                    \"description\": \"  " . $description .  "  \",
-                    \"image\": \"  " . $image .  "  \",
-                    \"url\": \"  " . $canonical .  "  \",
-                    \"datePublished\": \"  " . convertDateTime($post->created_at, 'd-m-y') .  "  \",
-                    \"dateModified\": \"  " . convertDateTime($post->created_at, 'd-m-y') .  "  \",
-                    \"author\": [
-                        \"@type\": \"Person\",
-                        \"name\": \"\",
-                        \"url\": \"\",
-                    ],
-                    \"publisher\": [
-                        \"@type\": \"Organization\",
-                        \"name\": \" An Hưng  \",
-                        \"logo\": [
-                            \"@type\": \"ImageObject\",
-                            \"url\": \"   \",
-                        ],
-                    ],
-                    \"mainEntityOfPage\": [
-                        \"@type\": \"Organization\",
-                        \"@id\": \" " . $canonical . " \",
-                    ],
-                    \"articleSection\": \"  " . $tintuc = 'Tin tức' .  "  \",
-                    \" keywords \": \"  \",
-                    \" timeRequired \": \"  \",
-                    \"about\": [
-                        \"@type\": \"Thing\",
-                        \"name\": \" \",
-                    ],
-                    \"mentions\": [
-                        {
-                            \"@type\": \"Product\",
-                            \"name\": \" \",
-                        }
-                    ],
-                }
-            </script>
-        ";
+        $schema = "<script type=\"application/ld+json\">\n"
+            . json_encode($jsonLdData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n"
+            . "</script>";
         $system = $this->system;
 
         return view('user.post.detail', ['system' => $system, 'post' => $post, 'newestPosts' => $newestPosts, 'products' => $products, 'contentWithToc' => $contentWithToc, 'seo' => $seo, 'schema' => $schema]);
@@ -681,72 +641,55 @@ class HomeController extends Controller
 
         $catCanonical = config('app.url').'giai-phap';
 
-        $itemBreadcrumbElements .= "
-            {
-                \"@type\": \"ListItem\",
-                \"position\": $positionBreadcrumb,
-                \"name\": \"" . $name . "\",
-                \"item\": \"" . $canonical . "\",
-            },";
+        $jsonLdData = [
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 1,
+                        'name' => 'Trang chủ',
+                        'item' => config('app.url'),
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 2,
+                        'name' => 'Giải pháp',
+                        'item' => $catCanonical,
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 3,
+                        'name' => $solution->name,
+                        'item' => $canonical,
+                    ],
+                ],
+            ],
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'Article',
+                'headline' => $solution->name,
+                'description' => $description,
+                'image' => $image,
+                'url' => $canonical,
+                'datePublished' => convertDateTime($solution->created_at, 'Y-m-d'),
+                'dateModified' => convertDateTime($solution->updated_at ?? $solution->created_at, 'Y-m-d'),
+                'publisher' => [
+                    '@type' => 'Organization',
+                    'name' => 'DATYSO',
+                    'url' => config('app.url'),
+                ],
+                'mainEntityOfPage' => [
+                    '@type' => 'WebPage',
+                    '@id' => $canonical,
+                ],
+            ],
+        ];
 
-        $itemBreadcrumbElements = rtrim($itemBreadcrumbElements, ',');
-
-        $schema = "
-            <script type=\"application/ld+json\">
-                {
-                    \"@type\": \"BreadcrumbList\",
-                    \"itemListElement\": [
-                        {
-                            \"@type\": \"ListItem\",
-                            \"position\": 1,
-                            \"name\": \" Trang chủ  \",
-                            \"item\": \" ". config('app.url') . " \"
-                        },
-                        $itemBreadcrumbElements
-                    ]
-                },
-                {
-                    \"@context\": \"https://schema.org\",
-                    \"@type\": \"BlogPosting\",
-                    \"headline\": \" " . $name .  " \",
-                    \"description\": \"  " . $description .  "  \",
-                    \"image\": \"  " . $image .  "  \",
-                    \"url\": \"  " . $canonical .  "  \",
-                    \"datePublished\": \"  " . convertDateTime($solution->created_at, 'd-m-y') .  "  \",
-                    \"dateModified\": \"  " . convertDateTime($solution->created_at, 'd-m-y') .  "  \",
-                    \"author\": [
-                        \"@type\": \"Person\",
-                        \"name\": \"\",
-                        \"url\": \"\",
-                    ],
-                    \"publisher\": [
-                        \"@type\": \"Organization\",
-                        \"name\": \" An Hưng  \",
-                        \"logo\": [
-                            \"@type\": \"ImageObject\",
-                            \"url\": \"   \",
-                        ],
-                    ],
-                    \"mainEntityOfPage\": [
-                        \"@type\": \"Organization\",
-                        \"@id\": \" " . $canonical . " \",
-                    ],
-                    \"articleSection\": \"  " . $tintuc = 'Tin tức' .  "  \",
-                    \" keywords \": \"  \",
-                    \" timeRequired \": \"  \",
-                    \"about\": [
-                        \"@type\": \"Thing\",
-                        \"name\": \" \",
-                    ],
-                    \"mentions\": [
-                        {
-                            \"@type\": \"Product\",
-                            \"name\": \" \",
-                        }
-                    ],
-                }
-            </script>
-        ";
+        $schema = "<script type=\"application/ld+json\">\n"
+            . json_encode($jsonLdData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n"
+            . "</script>";
 
         return view('user.solution.detail', ['solution' => $solution, 'newestPosts' => $newestPosts, 'products' => $products, 'schema' => $schema, 'seo' => $seo]);
     }
