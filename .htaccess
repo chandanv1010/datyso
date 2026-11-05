@@ -1,3 +1,21 @@
-RewriteEngine on
-RewriteCond %{REQUEST_URI} !^public
-RewriteRule ^(.*)$ public/$1 [L]
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # 1. 301 một bước: Bỏ dấu "/" ở cuối URL (không qua /public/)
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} !^/+$
+    RewriteCond %{REQUEST_URI} ^(?:/public)?/(.+?)/+$
+    RewriteRule ^ /%1 [L,R=301]
+
+    # 2. Bỏ tiền tố /public/ nếu người dùng/bot truy cập trực tiếp có /public/ trên URL
+    RewriteCond %{THE_REQUEST} \s/+public/([^\s?]*) [NC]
+    RewriteRule ^ /%1 [L,R=301]
+
+    # 3. Rewrite ngầm nội bộ toàn bộ request vào thư mục public/
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
