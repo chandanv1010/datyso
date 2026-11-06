@@ -150,18 +150,13 @@ class HomeController extends Controller
         $position = 1;
 
         foreach ($products as $product) {
-            $image = ($product->images && $product->images->first()) ? getImageUrl($product->images->first()->image) : '';
             $name = $product->name;
             $canonical = route('product.detail', ['categorySlug' => $category->slug, 'productSlug' => $product->slug]);
             $productListItems[] = [
                 '@type' => 'ListItem',
                 'position' => $position,
-                'item' => [
-                    '@type' => 'Product',
-                    'name' => $name,
-                    'url' => $canonical,
-                    'image' => $image,
-                ],
+                'name' => $name,
+                'url' => $canonical,
             ];
             $position++;
         }
@@ -219,7 +214,7 @@ class HomeController extends Controller
         if (!$product) {
             return redirect()->route('index');
         }
-        $productImage = $product->images->first()->image;
+        $productImage = ($product->images && $product->images->first()) ? $product->images->first()->image : '';
 
         $checkProduct = $category->products()->where('m_products.id', $product->id)->first();
         if (!$checkProduct) {
@@ -242,11 +237,15 @@ class HomeController extends Controller
             'canonical' => route('product.detail', ['categorySlug' => $category->slug, 'productSlug' => $product->slug]),
         ];
 
-        $image = $productImage;
+        $image = getImageUrl($productImage);
         $name = $product->name;
         $description = htmlspecialchars_decode(html_entity_decode(strip_tags($product->description)));
+        if (empty($description)) {
+            $description = $name;
+        }
         $cat_name = $category->name;
         $cat_canonical = route('product.list', ['categorySlug' => $category->slug]);
+        $canonical = route('product.detail', ['categorySlug' => $category->slug, 'productSlug' => $product->slug]);
 
         $itemBreadcrumbElements = '';
 
@@ -283,6 +282,7 @@ class HomeController extends Controller
                 'name' => $name,
                 'description' => $description,
                 'image' => $image,
+                'url' => $canonical,
                 'brand' => [
                     '@type' => 'Brand',
                     'name' => 'DATYSO',
@@ -300,6 +300,8 @@ class HomeController extends Controller
                     '@type' => 'Offer',
                     'price' => !empty($product->price) ? (string) $product->price : '0',
                     'priceCurrency' => 'VND',
+                    'priceValidUntil' => '2027-12-31',
+                    'url' => $canonical,
                     'availability' => 'https://schema.org/InStock',
                     'seller' => [
                         '@type' => 'Organization',
