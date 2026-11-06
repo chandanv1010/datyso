@@ -235,3 +235,8 @@ Route::post('/ajax/cart/delete', [CartController::class, 'delete'])->name('cart.
 Route::get('gio-hang', [FeCartController::class, 'index'])->name('cart.index');
 Route::post('checkout', [FeCartController::class, 'checkout'])->name('cart.checkout');
 Route::get('dat-hang-thanh-cong/{id}', [FeCartController::class, 'success'])->name('cart.success');
+
+// Chặn truy cập trực tiếp vào /backup hoặc bất kỳ file con nào
+Route::any('/backup/{any?}', function () {
+    abort(403, 'Access denied.');
+})->where('any', '.*');

@@ -5,6 +5,11 @@
 
     RewriteEngine On
 
+    # 0. Chặn truy cập thư mục backup trả về 403 Forbidden
+    RewriteCond %{THE_REQUEST} \s/+(?:public/)?backup(?:/|\s|\?) [NC,OR]
+    RewriteCond %{REQUEST_URI} ^/(?:public/)?backup(/.*)?$ [NC]
+    RewriteRule ^ - [F,L]
+
     # 1. Nếu request trực tiếp vào /public/ hoặc /public, 301 về trang chủ /
     RewriteCond %{THE_REQUEST} \s/+public/?[\s?] [NC]
     RewriteRule ^ / [L,R=301]

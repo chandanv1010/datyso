@@ -28,6 +28,12 @@ class CanonicalRedirect
         $path = parse_url($uri, PHP_URL_PATH) ?? '/';
         $queryString = parse_url($uri, PHP_URL_QUERY);
 
+        // Chặn truy cập vào đường dẫn /backup hoặc /backup/ -> trả về 403 Forbidden
+        $cleanPathForCheck = trim(preg_replace('#^/public(?:/|$)#i', '/', $path), '/');
+        if (preg_match('#^backup(?:/|$)#i', $cleanPathForCheck)) {
+            abort(403, 'Access denied.');
+        }
+
         $hasPublic = (bool) preg_match('#^/public(?:/|$)#i', $path);
         $hasTrailingSlash = (strlen($path) > 1 && str_ends_with($path, '/'));
 
