@@ -171,9 +171,14 @@
                 <div class="col-sm-9" id="product-container">
                     <div class="row mb-4">
                         @foreach ($products as $product)
+                            @php
+                                $productCatSlug = $product->categories->contains('id', $category->id)
+                                    ? $category->slug
+                                    : (($product->categories && $product->categories->isNotEmpty()) ? $product->categories->first()->slug : $category->slug);
+                            @endphp
                             <div class="col-sm-4 mb-3">
                                 <div class="h-100">
-                                    <a href="{{ route('product.detail', ['categorySlug' => $category->slug, 'productSlug' => $product->slug]) }}"
+                                    <a href="{{ route('product.detail', ['categorySlug' => $productCatSlug, 'productSlug' => $product->slug]) }}"
                                         class="text-decoration-none text-black h-100">
                                         <div class="bg-white border-0 rounded-4 shadow d-flex flex-column h-100">
                                             @foreach ($product->images as $image)

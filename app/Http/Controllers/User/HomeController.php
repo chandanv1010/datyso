@@ -126,7 +126,16 @@ class HomeController extends Controller
         }
         $category->banner = getImageUrl($category->banner);
 
-        $products = $category->products()->with(['images'])->where('del_flg', 1)->paginate(15);
+        $categoryIds = $category->getAllChildrenIds();
+
+        $products = Product::whereHas('categories', function ($query) use ($categoryIds) {
+            $query->whereIn('m_category.id', $categoryIds)->where('m_category.status', 1);
+        })
+        ->with(['images', 'categories'])
+        ->where('status', 1)
+        ->where('del_flg', 1)
+        ->orderBy('id', 'desc')
+        ->paginate(15);
 
         $seoTitle = !empty($category->seo_title) ? $category->seo_title : $category->name;
         $seoDesc = !empty($category->seo_description) 
@@ -151,7 +160,10 @@ class HomeController extends Controller
 
         foreach ($products as $product) {
             $name = $product->name;
-            $canonical = route('product.detail', ['categorySlug' => $category->slug, 'productSlug' => $product->slug]);
+            $productCatSlug = $product->categories->contains('id', $category->id)
+                ? $category->slug
+                : (($product->categories && $product->categories->isNotEmpty()) ? $product->categories->first()->slug : $category->slug);
+            $canonical = route('product.detail', ['categorySlug' => $productCatSlug, 'productSlug' => $product->slug]);
             $productListItems[] = [
                 '@type' => 'ListItem',
                 'position' => $position,
@@ -218,6 +230,16 @@ class HomeController extends Controller
 
         $checkProduct = $category->products()->where('m_products.id', $product->id)->first();
         if (!$checkProduct) {
+            // Kiểm tra xem sản phẩm có thuộc danh mục con của danh mục này không
+            $categoryIds = $category->getAllChildrenIds();
+            $childCategory = $product->categories()->whereIn('m_category.id', $categoryIds)->where('m_category.status', 1)->first();
+            if ($childCategory) {
+                // 301 Redirect về URL chuẩn của danh mục con chính thức để tránh trùng lặp URL (canonical)
+                return redirect()->route('product.detail', [
+                    'categorySlug' => $childCategory->slug,
+                    'productSlug' => $product->slug,
+                ], 301);
+            }
             return redirect()->route('index');
         }
 

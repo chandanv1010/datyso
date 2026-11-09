@@ -32,4 +32,19 @@ class Category extends Model
     {
         return $this->hasMany(Category::class, 'parent_id', 'id');
     }
+
+    /**
+     * Lấy toàn bộ ID của danh mục này và tất cả các danh mục con cháu đang hoạt động.
+     *
+     * @return array<int>
+     */
+    public function getAllChildrenIds(): array
+    {
+        $ids = [(int) $this->id];
+        $children = Category::where('parent_id', $this->id)->where('status', 1)->get();
+        foreach ($children as $child) {
+            $ids = array_merge($ids, $child->getAllChildrenIds());
+        }
+        return array_values(array_unique($ids));
+    }
 }
