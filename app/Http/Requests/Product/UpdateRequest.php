@@ -41,12 +41,18 @@ class UpdateRequest extends FormRequest
             'attributeContent' => 'required|array|min:1',
             'attributeContent.*' => 'required|string|max:255',
             'slug' => 'max:500',
+            'seo_title' => 'nullable|string|max:255',
+            'seo_description' => 'nullable|string|max:500',
+            'seo_keywords' => 'nullable|string|max:255',
         ];
     }
 
     public function messages(): array
     {
         return [
+            'seo_title.max' => 'Tiêu đề SEO không được vượt quá 255 ký tự.',
+            'seo_description.max' => 'Mô tả Meta không được vượt quá 500 ký tự.',
+            'seo_keywords.max' => 'Từ khóa SEO không được vượt quá 255 ký tự.',
             'required' => ':attribute không được để trống.',
             'max' => ':attribute không được vượt quá :max ký tự.',
             'min' => ':attribute không được nhỏ hơn :min',

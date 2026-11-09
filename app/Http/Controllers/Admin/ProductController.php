@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
@@ -45,6 +46,7 @@ class ProductController extends Controller
      */
     public function create()
     {
+        $this->ensureProductColumns();
         $categories = Category::where('status', 1)->get();
 
         if ($categories->isEmpty()) {
@@ -76,6 +78,7 @@ class ProductController extends Controller
      */
     public function store(CreateRequest $request)
     {
+        $this->ensureProductColumns();
         $category = Category::where([['id', $request['category_id']], ['status', 1]])->first();
         if (!$category) {
             return back()->with('messageError', config('message.data_not_found'))->withInput();
@@ -101,6 +104,9 @@ class ProductController extends Controller
                 'voltage' => $request->voltage,
                 'video' => $request->video,
                 'slug' => $request->slug,
+                'seo_title' => $request->seo_title,
+                'seo_description' => $request->seo_description,
+                'seo_keywords' => $request->seo_keywords,
                 'price' => convert_price($request->price),
                 'price_discount' => convert_price($request->price_discount),
                 
@@ -145,6 +151,7 @@ class ProductController extends Controller
      */
     public function edit(string $id)
     {
+        $this->ensureProductColumns();
         $item = Product::with(['categories', 'images', 'descriptions'])
         ->where('id', $id)->first();
 
@@ -174,6 +181,7 @@ class ProductController extends Controller
      */
     public function update(UpdateRequest $request, string $id)
     {
+        $this->ensureProductColumns();
         $category = Category::where([['id', $request['category_id']], ['status', 1]])->first();
         if (!$category) {
             return back()->with('messageError', config('message.data_not_found'))->withInput();
@@ -199,6 +207,9 @@ class ProductController extends Controller
             $item->voltage = $request->voltage;
             $item->video = $request->video;
             $item->slug = $request->slug;
+            $item->seo_title = $request->seo_title;
+            $item->seo_description = $request->seo_description;
+            $item->seo_keywords = $request->seo_keywords;
             $item->price = convert_price($request->price);
             $item->price_discount = convert_price($request->price_discount);
             $item->album = $request->album;
@@ -292,6 +303,31 @@ class ProductController extends Controller
             DB::rollBack();
             Log::error($th);
             return redirect()->route('admin.product.index')->with('messageError',  config('message.status_error'));
+        }
+    }
+
+    /**
+     * Tự động kiểm tra và thêm các cột SEO nếu chưa tồn tại trong bảng m_products.
+     * Đảm bảo hệ thống tự phục hồi kể cả khi chưa chạy migration trên hosting.
+     */
+    private function ensureProductColumns(): void
+    {
+        try {
+            if (!Schema::hasColumn('m_products', 'seo_title')) {
+                Schema::table('m_products', function ($table) {
+                    if (!Schema::hasColumn('m_products', 'seo_title')) {
+                        $table->string('seo_title', 255)->nullable()->after('slug');
+                    }
+                    if (!Schema::hasColumn('m_products', 'seo_description')) {
+                        $table->text('seo_description')->nullable()->after('seo_title');
+                    }
+                    if (!Schema::hasColumn('m_products', 'seo_keywords')) {
+                        $table->string('seo_keywords', 255)->nullable()->after('seo_description');
+                    }
+                });
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Could not auto-migrate product columns: ' . $e->getMessage());
         }
     }
 }

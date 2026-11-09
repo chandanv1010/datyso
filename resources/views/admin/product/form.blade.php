@@ -221,6 +221,52 @@
 
             <x-album :model="$item" />
 
+            <!-- CẤU HÌNH SEO RIÊNG CHO SẢN PHẨM -->
+            <div class="card mb-4 border-primary border-opacity-25 shadow-sm">
+                <div class="card-header bg-primary text-white fw-bold d-flex align-items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-search me-2" viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                    </svg>
+                    CẤU HÌNH SEO RIÊNG CHO SẢN PHẨM (SEO TITLE & META)
+                </div>
+                <div class="card-body">
+                    <!-- SEO Title -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <label for="seo_title" class="form-label fw-bold">SEO Title riêng</label>
+                            <span class="text-muted small" id="seo-title-count">0 / 65 ký tự (Khuyên dùng: 50 - 65)</span>
+                        </div>
+                        <input type="text" class="form-control" id="seo_title" name="seo_title" maxlength="150"
+                            placeholder="VD: Máy Hàn Laser QG-SC 1500W Chính Hãng Giá Tốt Nhất | DATYSO"
+                            value="{{ old('seo_title') ?? (isset($item) ? $item->seo_title : '') }}">
+                        <div class="form-text text-muted">Nếu để trống, hệ thống sẽ tự động dùng "Tên sản phẩm" làm tiêu đề SEO trang chi tiết.</div>
+                        <p class="help is-danger text-danger">{{ $errors->first('seo_title') }}</p>
+                    </div>
+
+                    <!-- Meta Description -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <label for="seo_description" class="form-label fw-bold">Meta Description riêng</label>
+                            <span class="text-muted small" id="seo-desc-count">0 / 160 ký tự (Khuyên dùng: 140 - 160)</span>
+                        </div>
+                        <textarea class="form-control" id="seo_description" name="seo_description" rows="3" maxlength="300"
+                            placeholder="VD: Máy hàn laser QG-SC 1500W công nghệ mới, mối hàn ngấu sâu sáng bóng, bảo hành chính hãng 24 tháng tại DATYSO...">{{ old('seo_description') ?? (isset($item) ? $item->seo_description : '') }}</textarea>
+                        <div class="form-text text-muted">Nếu để trống, hệ thống sẽ tự động trích xuất từ nội dung mô tả sản phẩm.</div>
+                        <p class="help is-danger text-danger">{{ $errors->first('seo_description') }}</p>
+                    </div>
+
+                    <!-- Meta Keywords -->
+                    <div class="mb-2">
+                        <label for="seo_keywords" class="form-label fw-bold">Meta Keywords riêng (tùy chọn)</label>
+                        <input type="text" class="form-control" id="seo_keywords" name="seo_keywords" maxlength="255"
+                            placeholder="VD: máy hàn laser, máy hàn laser qg-sc 1500w, máy hàn laser cầm tay"
+                            value="{{ old('seo_keywords') ?? (isset($item) ? $item->seo_keywords : '') }}">
+                        <div class="form-text text-muted">Nhập các từ khóa liên quan phân cách bằng dấu phẩy.</div>
+                        <p class="help is-danger text-danger">{{ $errors->first('seo_keywords') }}</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="row mb-3">
                 <div class="col-6">
                     <label for="status" class="form-label">Trạng thái<span class="text-danger">*</span></label>
@@ -346,7 +392,34 @@
     });
 
     $('#product-form').on('submit', function() {
+        if (typeof tinymce !== 'undefined') {
+            tinymce.triggerSave();
+        }
         $('#btn-button').attr('disabled', true);
+    });
+
+    $(document).ready(function() {
+        function updateSeoCounters() {
+            var titleLen = $('#seo_title').val() ? $('#seo_title').val().length : 0;
+            $('#seo-title-count').text(titleLen + ' / 65 ký tự (Khuyên dùng: 50 - 65)');
+            if (titleLen > 65) {
+                $('#seo-title-count').addClass('text-danger fw-bold').removeClass('text-muted');
+            } else {
+                $('#seo-title-count').removeClass('text-danger fw-bold').addClass('text-muted');
+            }
+
+            var descLen = $('#seo_description').val() ? $('#seo_description').val().length : 0;
+            $('#seo-desc-count').text(descLen + ' / 160 ký tự (Khuyên dùng: 140 - 160)');
+            if (descLen > 160) {
+                $('#seo-desc-count').addClass('text-danger fw-bold').removeClass('text-muted');
+            } else {
+                $('#seo-desc-count').removeClass('text-danger fw-bold').addClass('text-muted');
+            }
+        }
+
+        $('#seo_title').on('input', updateSeoCounters);
+        $('#seo_description').on('input', updateSeoCounters);
+        updateSeoCounters();
     });
 
      $(document).ready(function() {

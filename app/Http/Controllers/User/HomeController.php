@@ -223,23 +223,29 @@ class HomeController extends Controller
 
         $otherProducts = Product::where([['status', 1], ['id', '!=', $product->id]])->inRandomOrder()->limit(3)->get();
 
-        $seo = [
-            'meta_title' => $product->name,
-            'meta_keyword' => '',
-            'meta_description' => htmlspecialchars_decode((html_entity_decode(trim(
+        $seoTitle = !empty($product->seo_title) ? $product->seo_title : $product->name;
+        $seoDesc = !empty($product->seo_description)
+            ? $product->seo_description
+            : htmlspecialchars_decode((html_entity_decode(trim(
                 preg_replace(
                     '/\s+/', // xoá tất cả khoảng trắng dư, kể cả \n \r \t
                     ' ',
                     cutnchar(strip_tags($product->description), 300)
                 )
-            )))),
+            ))));
+        $seoKeywords = !empty($product->seo_keywords) ? $product->seo_keywords : '';
+
+        $seo = [
+            'meta_title' => $seoTitle,
+            'meta_keyword' => $seoKeywords,
+            'meta_description' => $seoDesc,
             'meta_image' => getImageUrl($productImage),
             'canonical' => route('product.detail', ['categorySlug' => $category->slug, 'productSlug' => $product->slug]),
         ];
 
         $image = getImageUrl($productImage);
         $name = $product->name;
-        $description = htmlspecialchars_decode(html_entity_decode(strip_tags($product->description)));
+        $description = !empty($product->seo_description) ? $product->seo_description : htmlspecialchars_decode(html_entity_decode(strip_tags($product->description)));
         if (empty($description)) {
             $description = $name;
         }
