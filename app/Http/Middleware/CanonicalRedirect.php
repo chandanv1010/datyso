@@ -34,11 +34,13 @@ class CanonicalRedirect
             abort(403, 'Access denied.');
         }
 
+        $rawHost = $request->getHost();
+        $hasWww = (bool) preg_match('#^www\.#i', $rawHost);
         $hasPublic = (bool) preg_match('#^/public(?:/|$)#i', $path);
         $hasTrailingSlash = (strlen($path) > 1 && str_ends_with($path, '/'));
 
-        // If URL contains '/public' or has a trailing slash (not root '/')
-        if ($hasPublic || $hasTrailingSlash) {
+        // If host has 'www.' or URL contains '/public' or has a trailing slash (not root '/')
+        if ($hasWww || $hasPublic || $hasTrailingSlash) {
             // 1. Remove '/public' prefix if present
             $cleanPath = preg_replace('#^/public(?:/|$)#i', '/', $path);
 
@@ -49,7 +51,15 @@ class CanonicalRedirect
             }
 
             // 3. Re-attach query string if any
-            $targetUrl = $cleanPath . ($queryString !== null && $queryString !== '' ? '?' . $queryString : '');
+            $queryStringPart = ($queryString !== null && $queryString !== '') ? '?' . $queryString : '';
+
+            // 4. Construct target canonical URL
+            if ($hasWww) {
+                $canonicalHost = preg_replace('#^www\.#i', '', $rawHost);
+                $targetUrl = 'https://' . $canonicalHost . $cleanPath . $queryStringPart;
+            } else {
+                $targetUrl = $cleanPath . $queryStringPart;
+            }
 
             // 301 Permanent Redirect in a single step
             return redirect($targetUrl, 301);
