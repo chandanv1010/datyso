@@ -61,9 +61,22 @@ class TableOfContent extends Component
             ];
         }
 
-        // Trả lại phần HTML bên trong wrapper
+        // Trả lại phần HTML bên trong wrapper (loại bỏ hoàn toàn container toc-temp-wrapper)
         $wrapper = $dom->getElementById('toc-temp-wrapper');
-        return $wrapper ? $dom->saveHTML($wrapper) : $dom->saveHTML();
+        $innerHtml = '';
+        if ($wrapper) {
+            foreach ($wrapper->childNodes as $child) {
+                $innerHtml .= $dom->saveHTML($child);
+            }
+        } else {
+            $innerHtml = $dom->saveHTML();
+        }
+
+        // Đảm bảo không bao giờ rò rỉ chuỗi container toc-temp-wrapper ra ngoài HTML
+        $innerHtml = preg_replace('/^<div\s+id=["\']toc-temp-wrapper["\']\s*>/i', '', $innerHtml);
+        $innerHtml = preg_replace('/<\/div>\s*$/i', '', $innerHtml);
+
+        return $innerHtml;
     }
 
     /**
@@ -93,7 +106,13 @@ class TableOfContent extends Component
             $text = html_entity_decode(trim(strip_tags($raw)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
             $cleanText = preg_replace('/^\d+(\.\d+)*\s*/u', '', $text);
 
-            $id = Str::slug($cleanText, '-'); // 👈 Giống injectIds()
+            $id = '';
+            if (preg_match('/\bid=["\']([^"\']+)["\']/i', $matches[0][$i], $idMatch)) {
+                $id = $idMatch[1];
+            }
+            if (empty($id)) {
+                $id = Str::slug($cleanText, '-');
+            }
 
             // Đánh số heading
             if (!isset($numbering[$level])) $numbering[$level] = 0;
@@ -149,14 +168,11 @@ class TableOfContent extends Component
                 continue;
             }
 
-            // ✅ Map theo yêu cầu: depth 1 -> h2, depth >=2 -> h3
-            $tag = ($depth === 1) ? 'h2' : 'h3';
+            // ✅ Chuẩn SEO: Mục lục dùng thẻ <a>/<li> (hoặc <p>), tuyệt đối KHÔNG dùng <h2> hoặc <h3> để tránh lặp heading
             $cleanText = preg_replace('/^\d+(\.\d+)*\s*/u', '', $item['text']);
 
             $html .= '<li class="depth-' . $depth . ' mb-1">';
-            $html .= "<{$tag} class=\"toc-heading depth-{$depth}\">";
-            $html .= "<a href=\"#{$item['id']}\" class=\"toc-link\">{$item['numbering']} {$cleanText}</a>";
-            $html .= "</{$tag}>";
+            $html .= "<a href=\"#{$item['id']}\" class=\"toc-link depth-{$depth}\">{$item['numbering']} {$cleanText}</a>";
 
             // Sang heading kế tiếp
             $i++;
