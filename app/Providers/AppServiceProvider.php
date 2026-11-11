@@ -2,13 +2,10 @@
 
 namespace App\Providers;
 
-use App\Mail\Transports\PhpMailTransport;
 use App\Models\Category;
 use App\Models\Social;
-use Illuminate\Mail\MailManager;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Schema;
 
@@ -29,17 +26,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFive();
         Paginator::useBootstrapFour();
-
-        try {
-            $mailManager = $this->app->make('mail.manager');
-            if ($mailManager instanceof MailManager) {
-                $mailManager->extend('php_mail', static function () {
-                    return new PhpMailTransport();
-                });
-            }
-        } catch (\Throwable $e) {
-            // An toàn khi mail.manager chưa sẵn sàng
-        }
 
         $categories = collect();
         $socials = collect();

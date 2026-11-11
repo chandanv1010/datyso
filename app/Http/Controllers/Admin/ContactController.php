@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Contact\ContactRequest;
 use App\Models\Contact;
 use App\Services\LeadService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -15,37 +14,16 @@ class ContactController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(LeadService $leadService)
+    public function index()
     {
         Contact::ensureLeadSchema();
         $contacts = Contact::with(['product', 'category'])->orderBy('created_at', 'desc')->get();
-        $mailDiagnostics = $leadService->getMailDiagnostics();
+        $unreadCount = $contacts->where('is_read', 0)->count();
 
         return view('admin.contact.list', [
             'contacts' => $contacts,
-            'mailDiagnostics' => $mailDiagnostics,
+            'unreadCount' => $unreadCount,
         ]);
-    }
-
-    public function resendMail($id, LeadService $leadService)
-    {
-        Contact::ensureLeadSchema();
-        $contact = Contact::with(['product', 'category'])->find($id);
-        if (!$contact) {
-            return redirect()->route('admin.contact.index')->with('messageError', config('message.data_not_found'));
-        }
-
-        $settings = $leadService->getLeadSettings();
-        $result = $leadService->notifySales($contact, $settings['sales_emails']);
-
-        if (!empty($result['ok'])) {
-            $toList = implode(', ', $result['recipients']);
-            return redirect()->route('admin.contact.index')
-                ->with('messageSuccess', "Đã gửi lại email Lead #{$contact->id} tới {$toList} qua {$result['mailer']}.");
-        }
-
-        return redirect()->route('admin.contact.index')
-            ->with('messageError', "Chưa thể gửi email Lead #{$contact->id}: " . ($result['error'] ?: 'Kiểm tra lại cấu hình Mail trong Cấu hình hệ thống.'));
     }
 
     /**
@@ -54,7 +32,7 @@ class ContactController extends Controller
     public function create()
     {
         Contact::ensureLeadSchema();
-        return view('admin.contact.form',);
+        return view('admin.contact.form');
     }
 
     /**
@@ -66,7 +44,7 @@ class ContactController extends Controller
         try {
             DB::beginTransaction();
 
-            $contact = Contact::create([
+            Contact::create([
                 'username' => $request->username,
                 'email' => $request->email ?: null,
                 'phone' => LeadService::normalizePhone($request->phone),
@@ -75,13 +53,7 @@ class ContactController extends Controller
 
             DB::commit();
 
-            /** @var LeadService $leadService */
-            $leadService = app(LeadService::class);
-            $settings = $leadService->getLeadSettings();
-            $leadService->notifySales($contact, $settings['sales_emails']);
-
             return redirect()->route('admin.contact.index')->with('messageSuccess', config('message.create_success'));
-
         } catch (\Throwable $th) {
             DB::rollBack();
             Log::error($th);
@@ -89,7 +61,7 @@ class ContactController extends Controller
         }
     }
 
-    public function postStatus($id) 
+    public function postStatus($id)
     {
         $contact = Contact::where('id', $id)->first();
         if (!$contact) {
@@ -98,7 +70,7 @@ class ContactController extends Controller
         try {
             DB::beginTransaction();
 
-            $contact->is_read = ($contact->is_read == 0 ? 1: 0);
+            $contact->is_read = ($contact->is_read == 0 ? 1 : 0);
             $contact->save();
 
             DB::commit();
@@ -110,7 +82,7 @@ class ContactController extends Controller
         }
     }
 
-    public function postSupported($id) 
+    public function postSupported($id)
     {
         $contact = Contact::where('id', $id)->first();
         if (!$contact) {
@@ -119,7 +91,7 @@ class ContactController extends Controller
         try {
             DB::beginTransaction();
 
-            $contact->is_supported = ($contact->is_supported == 0 ? 1: 0);
+            $contact->is_supported = ($contact->is_supported == 0 ? 1 : 0);
             $contact->save();
 
             DB::commit();

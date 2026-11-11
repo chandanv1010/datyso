@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\Views;
-use App\Mail\ContactMail;
 use App\Models\Category;
 use App\Models\Contact;
 use App\Models\Product;
@@ -14,8 +13,6 @@ use App\Models\User;
 use App\Services\LeadService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -142,13 +139,14 @@ class LeadFormTest extends TestCase
         $response->assertDontSee('hsforms.net');
     }
 
-    public function test_lead_submission_saves_to_db_sends_sales_email_and_syncs_google_sheet(): void
+    public function test_lead_submission_saves_to_admin_without_sending_sales_email_and_syncs_google_sheet(): void
     {
         Mail::fake();
         Http::fake([
             'https://script.google.com/*' => Http::response(['ok' => true], 200),
         ]);
 
+        // Kể cả khi DB còn dữ liệu lead_sales_email cũ, hệ thống vẫn không gửi email về Sales
         System::updateOrInsert(['keyword' => 'lead_sales_email'], ['content' => 'sales1@datyso.com, sales2@datyso.com']);
         System::updateOrInsert(['keyword' => 'lead_google_sheet_webhook'], ['content' => 'https://script.google.com/macros/s/test-webhook/exec']);
 
@@ -196,9 +194,7 @@ class LeadFormTest extends TestCase
             'source_name' => $this->product->name,
         ]);
 
-        Mail::assertSent(ContactMail::class, function (ContactMail $mail) {
-            return $mail->hasTo('sales1@datyso.com') && $mail->hasTo('sales2@datyso.com');
-        });
+        Mail::assertNothingSent();
 
         Http::assertSent(function ($request) {
             return str_starts_with($request->url(), 'https://script.google.com/macros/s/test-webhook/exec')
@@ -321,7 +317,9 @@ class LeadFormTest extends TestCase
 
     public function test_admin_contact_list_and_system_settings_work_correctly(): void
     {
-        Contact::create([
+        Mail::fake();
+
+        $contact = Contact::create([
             'username' => 'Lê Minh Tâm',
             'phone' => '0909123456',
             'province' => 'Bình Dương',
@@ -337,33 +335,54 @@ class LeadFormTest extends TestCase
         $listRes->assertSee('Lê Minh Tâm');
         $listRes->assertSee('Bình Dương');
         $listRes->assertSee('Cắt thép 10mm');
+        $listRes->assertSee('Chưa đọc: 1');
+        $listRes->assertDontSee('Cảnh báo gửi Email Sales');
+        $listRes->assertDontSee('Mail Sales');
+
+        // Đánh dấu đã đọc & kiểm tra Admin tạo liên hệ thủ công không gửi mail
+        $this->actingAs($admin, 'admin')
+            ->post(route('admin.contact.status', ['id' => $contact->id]))
+            ->assertRedirect(route('admin.contact.index'));
+        $this->assertSame(1, (int) $contact->fresh()->is_read);
+
+        $this->actingAs($admin, 'admin')
+            ->post(route('admin.contact.store'), [
+                'username' => 'Khách Admin Nhập',
+                'phone' => '0911223344',
+                'email' => '',
+                'content' => 'Yêu cầu tư vấn tại showroom',
+            ])
+            ->assertRedirect(route('admin.contact.index'));
+        $this->assertDatabaseHas('m_contact', ['phone' => '0911223344', 'username' => 'Khách Admin Nhập']);
+        Mail::assertNothingSent();
 
         $systemRes = $this->actingAs($admin, 'admin')->get(route('admin.system.index'));
         $systemRes->assertOk();
-        $systemRes->assertSee('lead_sales_email', false);
         $systemRes->assertSee('lead_google_sheet_webhook', false);
         $systemRes->assertSee('lead_recaptcha_site_key', false);
+        $systemRes->assertDontSee('lead_sales_email', false);
+        $systemRes->assertDontSee('mail_host', false);
+        $systemRes->assertDontSee('Gửi Email Test Ngay');
 
-        // Verify SystemController::store properly updates existing key instead of inserting broken attributes
+        // Verify SystemController::store properly updates existing key instead of inserting duplicates
         $this->actingAs($admin, 'admin')->post(route('admin.system.store'), [
-            'config' => ['lead_sales_email' => 'sales-first@datyso.com'],
+            'config' => ['lead_google_sheet_webhook' => 'https://script.google.com/macros/s/first/exec'],
         ])->assertRedirect();
 
         $this->actingAs($admin, 'admin')->post(route('admin.system.store'), [
-            'config' => ['lead_sales_email' => 'sales-updated@datyso.com'],
+            'config' => ['lead_google_sheet_webhook' => 'https://script.google.com/macros/s/updated/exec'],
         ])->assertRedirect();
 
-        $this->assertSame(1, System::where('keyword', 'lead_sales_email')->count());
-        $this->assertSame('sales-updated@datyso.com', System::where('keyword', 'lead_sales_email')->value('content'));
+        $this->assertSame(1, System::where('keyword', 'lead_google_sheet_webhook')->count());
+        $this->assertSame('https://script.google.com/macros/s/updated/exec', System::where('keyword', 'lead_google_sheet_webhook')->value('content'));
     }
 
-    public function test_mail_failure_does_not_block_lead_saving_or_success_response(): void
+    public function test_lead_submission_never_calls_mailer_even_if_configured(): void
     {
         System::updateOrInsert(['keyword' => 'lead_sales_email'], ['content' => 'sales@datyso.com']);
 
-        Mail::shouldReceive('to')
-            ->once()
-            ->andThrow(new \RuntimeException('SMTP connection timed out'));
+        Mail::shouldReceive('to')->never();
+        Mail::shouldReceive('mailer')->never();
 
         /** @var LeadService $leadService */
         $leadService = app(LeadService::class);
@@ -425,6 +444,7 @@ class LeadFormTest extends TestCase
             'province' => 'TP. Hồ Chí Minh',
             'demand' => 'Hàn khung nhôm mỏng 1.5mm',
         ]);
+        Mail::assertNothingSent();
     }
 
     public function test_legacy_m_contact_table_auto_heals_schema_on_submit(): void
@@ -466,157 +486,10 @@ class LeadFormTest extends TestCase
         $res->assertOk()->assertJson(['status' => true]);
         $this->assertTrue(Schema::hasColumn('m_contact', 'province'));
         $this->assertTrue(Schema::hasColumn('m_contact', 'demand'));
-        $this->assertTrue(Schema::hasColumn('m_contact', 'mail_status'));
-        $this->assertTrue(Schema::hasColumn('m_contact', 'mail_error'));
-        $this->assertTrue(Schema::hasColumn('m_contact', 'mail_sent_at'));
         $this->assertDatabaseHas('m_contact', [
             'username' => 'Phạm Quốc Hùng',
             'province' => 'Đà Nẵng',
         ]);
-    }
-
-    public function test_lead_mail_runtime_config_resolves_admin_smtp_and_replaces_example_from(): void
-    {
-        Config::set('mail.default', 'log');
-        Config::set('mail.from.address', 'hello@example.com');
-        Config::set('mail.from.name', 'Example');
-
-        System::updateOrInsert(['keyword' => 'lead_sales_email'], ['content' => 'nv09.mkt@datyso.vn']);
-        System::updateOrInsert(['keyword' => 'mail_mailer'], ['content' => 'auto']);
-        System::updateOrInsert(['keyword' => 'mail_host'], ['content' => 'mail.datyso.com']);
-        System::updateOrInsert(['keyword' => 'mail_port'], ['content' => '465']);
-        System::updateOrInsert(['keyword' => 'mail_encryption'], ['content' => 'ssl']);
-        System::updateOrInsert(['keyword' => 'mail_username'], ['content' => 'noreply@datyso.com']);
-        System::updateOrInsert(['keyword' => 'mail_password'], ['content' => Crypt::encryptString('MatKhauSmtp@2026')]);
-        System::updateOrInsert(['keyword' => 'mail_from_address'], ['content' => null]);
-
-        /** @var LeadService $leadService */
-        $leadService = app(LeadService::class);
-        $resolved = $leadService->resolveMailRuntimeConfig();
-
-        $this->assertSame('smtp', $resolved['mailer']);
-        $this->assertSame('mail.datyso.com', $resolved['host']);
-        $this->assertSame(465, $resolved['port']);
-        $this->assertSame('ssl', $resolved['encryption']);
-        $this->assertSame('noreply@datyso.com', $resolved['username']);
-        $this->assertSame('MatKhauSmtp@2026', $resolved['password']);
-        $this->assertSame('noreply@datyso.com', $resolved['from_address']);
-        $this->assertSame('DATYSO Website', $resolved['from_name']);
-    }
-
-    public function test_admin_system_encrypts_mail_password_preserves_on_blank_and_supports_test_mail(): void
-    {
-        $admin = User::first();
-
-        $this->actingAs($admin, 'admin')->post(route('admin.system.store'), [
-            'config' => [
-                'lead_sales_email' => 'nv09.mkt@datyso.vn',
-                'mail_mailer' => 'smtp',
-                'mail_host' => 'smtp.gmail.com',
-                'mail_port' => '587',
-                'mail_encryption' => 'tls',
-                'mail_username' => 'datysoweb@gmail.com',
-                'mail_password' => 'my-app-pass-16ch',
-                'mail_from_address' => 'datysoweb@gmail.com',
-                'mail_from_name' => 'DATYSO Hotline',
-            ],
-        ])->assertRedirect();
-
-        $storedEncrypted = System::where('keyword', 'mail_password')->value('content');
-        $this->assertNotEmpty($storedEncrypted);
-        $this->assertNotSame('my-app-pass-16ch', $storedEncrypted);
-        $this->assertSame('my-app-pass-16ch', Crypt::decryptString($storedEncrypted));
-
-        // Trang cấu hình không được lộ mật khẩu ra HTML và phải báo đã lưu
-        $systemPage = $this->actingAs($admin, 'admin')->get(route('admin.system.index'));
-        $systemPage->assertOk();
-        $systemPage->assertDontSee('my-app-pass-16ch', false);
-        $systemPage->assertDontSee($storedEncrypted, false);
-        $systemPage->assertSee('Đã lưu mật khẩu SMTP');
-
-        // Lưu lại khi ô mật khẩu để trống -> giữ nguyên mật khẩu cũ
-        $this->actingAs($admin, 'admin')->post(route('admin.system.store'), [
-            'config' => [
-                'lead_sales_email' => 'nv09.mkt@datyso.vn, sales@datyso.com',
-                'mail_password' => '',
-            ],
-        ])->assertRedirect();
-
-        $this->assertSame($storedEncrypted, System::where('keyword', 'mail_password')->value('content'));
-
-        // Test nút Gửi Email Test Ngay
-        Mail::fake();
-        $testRes = $this->actingAs($admin, 'admin')->postJson(route('admin.system.testMail'), [
-            'test_email' => 'nv09.mkt@datyso.vn',
-            'config' => [
-                'lead_sales_email' => 'nv09.mkt@datyso.vn',
-                'mail_mailer' => 'smtp',
-                'mail_host' => 'smtp.gmail.com',
-                'mail_port' => '587',
-                'mail_encryption' => 'tls',
-                'mail_username' => 'datysoweb@gmail.com',
-                'mail_password' => '',
-                'mail_from_address' => 'datysoweb@gmail.com',
-            ],
-        ]);
-
-        $testRes->assertOk()->assertJson([
-            'ok' => true,
-            'status' => 'sent',
-        ]);
-        $this->assertSame(0, Contact::count());
-
-        Mail::assertSent(ContactMail::class, function (ContactMail $mail) {
-            return $mail->hasTo('nv09.mkt@datyso.vn');
-        });
-    }
-
-    public function test_mail_tracking_records_log_mode_and_admin_can_resend_email(): void
-    {
-        System::updateOrInsert(['keyword' => 'lead_sales_email'], ['content' => 'nv09.mkt@datyso.vn']);
-        System::updateOrInsert(['keyword' => 'mail_mailer'], ['content' => 'log']);
-
-        /** @var LeadService $leadService */
-        $leadService = app(LeadService::class);
-        $ts = time() - 5;
-
-        // Không dùng Mail::fake() để kiểm tra MailManager chạy thật ở chế độ log
-        $res = $this->postJson(route('contact.register'), [
-            'username' => 'Trương Quang Huy',
-            'phone' => '0911223344',
-            'email' => 'khachhang@example.com',
-            'province' => 'Hà Nội',
-            'source_type' => 'contact',
-            'hp_company_fax' => '',
-            '_form_ts' => (string) $ts,
-            '_form_token' => $leadService->makeFormToken($ts),
-        ]);
-
-        $res->assertOk()->assertJson(['status' => true]);
-        $contact = Contact::where('phone', '0911223344')->firstOrFail();
-        $this->assertSame('logged', $contact->mail_status);
-        $this->assertStringContainsString('MAIL_MAILER=log', (string) $contact->mail_error);
-
-        // Chuyển sang SMTP với Mail::fake() và Admin bấm gửi lại mail
-        System::updateOrInsert(['keyword' => 'mail_mailer'], ['content' => 'smtp']);
-        System::updateOrInsert(['keyword' => 'mail_host'], ['content' => 'mail.datyso.com']);
-
-        Mail::fake();
-        $admin = User::first();
-        $resendRes = $this->actingAs($admin, 'admin')
-            ->post(route('admin.contact.resendMail', ['id' => $contact->id]));
-
-        $resendRes->assertRedirect(route('admin.contact.index'));
-        $resendRes->assertSessionHas('messageSuccess');
-
-        $contact->refresh();
-        $this->assertSame('sent', $contact->mail_status);
-        $this->assertNull($contact->mail_error);
-        $this->assertNotNull($contact->mail_sent_at);
-
-        Mail::assertSent(ContactMail::class, function (ContactMail $mail) {
-            return $mail->hasTo('nv09.mkt@datyso.vn')
-                && $mail->hasReplyTo('khachhang@example.com');
-        });
+        Mail::assertNothingSent();
     }
 }

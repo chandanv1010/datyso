@@ -97,7 +97,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
             Route::post('tao-moi', 'store')->name('store');
             Route::post('trang-thai/{id}', 'postStatus')->name('status');
             Route::post('kiem-duyet/{id}', 'postSupported')->name('supported');
-            Route::post('gui-lai-mail/{id}', 'resendMail')->name('resendMail');
         });
 
         Route::controller(AddressController::class)->prefix('address')->name('address.')->group(function () {
@@ -155,7 +154,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.'], function () {
         Route::controller(SystemController::class)->prefix('system')->name('system.')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('store', 'store')->name('store');
-            Route::post('test-mail', 'testMail')->name('testMail');
         });
 
         Route::controller(SolutionController::class)->prefix('solution')->name('solution.')->group(function () {

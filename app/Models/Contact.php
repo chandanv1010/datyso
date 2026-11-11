@@ -17,10 +17,6 @@ class Contact extends Model
 
     protected $guarded = [];
 
-    protected $casts = [
-        'mail_sent_at' => 'datetime',
-    ];
-
     protected static bool $leadSchemaEnsured = false;
 
     public function product()
@@ -55,12 +51,10 @@ class Contact extends Model
                 || !Schema::hasColumn('m_contact', 'source_type')
                 || !Schema::hasColumn('m_contact', 'source_name')
                 || !Schema::hasColumn('m_contact', 'source_url')
-                || !Schema::hasColumn('m_contact', 'ip_address')
-                || !Schema::hasColumn('m_contact', 'mail_status')
-                || !Schema::hasColumn('m_contact', 'mail_error')
-                || !Schema::hasColumn('m_contact', 'mail_sent_at');
+                || !Schema::hasColumn('m_contact', 'ip_address');
 
             $emailNotNullable = false;
+            $phoneTooShort = false;
             $driver = DB::getDriverName();
             if ($driver === 'mysql') {
                 $columnInfo = DB::selectOne(
@@ -68,6 +62,13 @@ class Contact extends Model
                 );
                 if ($columnInfo && strtoupper((string) ($columnInfo->IS_NULLABLE ?? '')) === 'NO') {
                     $emailNotNullable = true;
+                }
+
+                $phoneInfo = DB::selectOne(
+                    "SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'm_contact' AND COLUMN_NAME = 'phone'"
+                );
+                if ($phoneInfo && (int) ($phoneInfo->CHARACTER_MAXIMUM_LENGTH ?? 20) < 20) {
+                    $phoneTooShort = true;
                 }
             } elseif ($driver === 'sqlite') {
                 $cols = DB::select("PRAGMA table_info('m_contact')");
@@ -79,10 +80,13 @@ class Contact extends Model
                 }
             }
 
-            if ($missingColumns || $emailNotNullable) {
-                Schema::table('m_contact', function (Blueprint $table) use ($emailNotNullable) {
+            if ($missingColumns || $emailNotNullable || $phoneTooShort) {
+                Schema::table('m_contact', function (Blueprint $table) use ($emailNotNullable, $phoneTooShort) {
                     if ($emailNotNullable) {
                         $table->string('email', 150)->nullable()->change();
+                    }
+                    if ($phoneTooShort) {
+                        $table->string('phone', 20)->change();
                     }
                     if (!Schema::hasColumn('m_contact', 'category_id')) {
                         $table->unsignedBigInteger('category_id')->nullable()->after('product_id');
@@ -104,15 +108,6 @@ class Contact extends Model
                     }
                     if (!Schema::hasColumn('m_contact', 'ip_address')) {
                         $table->string('ip_address', 45)->nullable()->after('source_url');
-                    }
-                    if (!Schema::hasColumn('m_contact', 'mail_status')) {
-                        $table->string('mail_status', 30)->nullable()->after('ip_address');
-                    }
-                    if (!Schema::hasColumn('m_contact', 'mail_error')) {
-                        $table->text('mail_error')->nullable()->after('mail_status');
-                    }
-                    if (!Schema::hasColumn('m_contact', 'mail_sent_at')) {
-                        $table->timestamp('mail_sent_at')->nullable()->after('mail_error');
                     }
                 });
             }

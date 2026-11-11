@@ -8,7 +8,6 @@ use App\Http\Requests\Contact\LeadRequest;
 use App\Http\Requests\Customer\CreateRequest;
 use App\Http\Requests\UserProfile\UserProfileRequest;
 use App\Services\LeadService;
-use App\Mail\ContactMail;
 use App\Models\Address;
 use App\Models\Category;
 use App\Models\Contact;
