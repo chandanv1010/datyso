@@ -34,6 +34,11 @@ class CanonicalRedirect
             abort(403, 'Access denied.');
         }
 
+        // Chặn vĩnh viễn tệp xác minh Search Console của hacker (luôn trả 404 trên cả local và hosting)
+        if (preg_match('#^googlef0602e43eee72fd4\.html$#i', $cleanPathForCheck)) {
+            abort(404);
+        }
+
         $rawHost = $request->getHost();
         $hasWww = (bool) preg_match('#^www\.#i', $rawHost);
         $hasPublic = (bool) preg_match('#^/public(?:/|$)#i', $path);

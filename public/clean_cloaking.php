@@ -158,6 +158,28 @@ foreach ($publicHtmlDirs as $d) {
     $scanTargetDirs[] = $d . '/userfiles';
 }
 
+// Xóa triệt để tệp xác minh Google Search Console của hacker (saniatan127@gmail.com) và rà soát file google*.html lạ
+$hackerVerifyFiles = [];
+foreach ($publicHtmlDirs as $d) {
+    $hackerVerifyFiles[] = $d . '/googlef0602e43eee72fd4.html';
+    $hackerVerifyFiles[] = $d . '/public/googlef0602e43eee72fd4.html';
+    $hackerVerifyFiles[] = $d . '/clone/googlef0602e43eee72fd4.html';
+    $hackerVerifyFiles[] = $d . '/clone/public/googlef0602e43eee72fd4.html';
+    foreach (array_merge(glob($d . '/google*.html') ?: [], glob($d . '/public/google*.html') ?: []) as $gFile) {
+        if (strtolower(basename($gFile)) === 'googlef0602e43eee72fd4.html') {
+            continue;
+        }
+        $results['suspicious_files'][] = 'Phát hiện tệp xác minh Google khác (cần tự kiểm tra xem có phải của bạn không): ' . $gFile;
+    }
+}
+foreach (array_unique($hackerVerifyFiles) as $hf) {
+    if (file_exists($hf)) {
+        @unlink($hf);
+        $results['deleted_files'][] = 'Đã xóa tệp xác minh Search Console của hacker (saniatan127): ' . $hf;
+    }
+}
+$results['suspicious_files'] = array_values(array_unique($results['suspicious_files']));
+
 // Quét trực tiếp file amp.html ở các thư mục gốc
 foreach ($publicHtmlDirs as $d) {
     $ampFiles = [
@@ -391,6 +413,17 @@ foreach (array_unique($envCandidates) as $envFile) {
             </div>
         <?php else: ?>
             <div class="box box-success">Không phát hiện file <code>amp.html</code>, webshell hoặc mã độc trong các thư mục media và asset.</div>
+        <?php endif; ?>
+
+        <?php if (!empty($results['suspicious_files'])): ?>
+            <div class="box box-warning">
+                <strong>Lưu ý các tệp xác minh Google Search Console khác đang có trên hosting:</strong>
+                <ul>
+                    <?php foreach ($results['suspicious_files'] as $sf): ?>
+                        <li><?= htmlspecialchars($sf) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
         <?php endif; ?>
 
         <h2>3. Cơ sở dữ liệu (Database MySQL):</h2>

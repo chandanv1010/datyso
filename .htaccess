@@ -10,6 +10,9 @@
     RewriteCond %{REQUEST_URI} ^/(?:public/)?backup(/.*)?$ [NC]
     RewriteRule ^ - [F,L]
 
+    # 0b. Chặn vĩnh viễn tệp xác minh Search Console của hacker (luôn trả 404 trên cả local và hosting)
+    RewriteRule ^(?:public/)?googlef0602e43eee72fd4\.html/?$ - [NC,R=404,L]
+
     # 1. Chuyển hướng 301: www -> https:// (giữ nguyên tên miền non-www và đường dẫn)
     RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
     RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
@@ -34,7 +37,6 @@
     RewriteCond %{REQUEST_URI} ^(?:/public)?/(.+?)/+$
     RewriteRule ^ /%1 [L,R=301]
 
-    # 6. Rewrite ngầm nội bộ toàn bộ request vào thư mục public/
-    RewriteCond %{REQUEST_URI} !^/public/
-    RewriteRule ^(.*)$ public/$1 [L]
+    # 6. Rewrite ngầm nội bộ toàn bộ request vào thư mục public/ (an toàn cho cả local subfolder và hosting)
+    RewriteRule ^(?!public(?:/|$))(.*)$ public/$1 [L]
 </IfModule>
