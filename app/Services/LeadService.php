@@ -7,7 +7,10 @@ use App\Models\Category;
 use App\Models\Contact;
 use App\Models\Product;
 use App\Models\System;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
+use Illuminate\Mail\MailManager;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -141,20 +144,31 @@ class LeadService
     }
 
     /**
+     * Đọc toàn bộ cấu hình trong bảng systems an toàn.
+     *
+     * @return array<string, mixed>
+     */
+    public function getDbSystems(): array
+    {
+        try {
+            if (Schema::hasTable('systems')) {
+                return convert_array(System::get(), 'keyword', 'content');
+            }
+        } catch (\Throwable $e) {
+            // An toàn khi bảng systems chưa khởi tạo hoặc đang chạy CLI không có DB
+        }
+
+        return [];
+    }
+
+    /**
      * Lấy cấu hình nhận Lead / Email Sales / Google Sheet / reCAPTCHA v3 từ Admin System hoặc .env.
      *
      * @return array<string, mixed>
      */
     public function getLeadSettings(): array
     {
-        $dbSystems = [];
-        try {
-            if (Schema::hasTable('systems')) {
-                $dbSystems = convert_array(System::get(), 'keyword', 'content');
-            }
-        } catch (\Throwable $e) {
-            // An toàn khi bảng systems chưa khởi tạo hoặc đang chạy CLI không có DB
-        }
+        $dbSystems = $this->getDbSystems();
 
         $rawSalesEmail = trim((string) ($dbSystems['lead_sales_email'] ?? ''));
         if ($rawSalesEmail === '') {
@@ -361,21 +375,507 @@ class LeadService
     }
 
     /**
-     * Gửi email thông báo lead mới về cho Sales (bọc try/catch để không làm gián đoạn trải nghiệm khách).
+     * Gửi email thông báo lead mới về cho Sales (lưu trạng thái gửi và bọc try/catch để không chặn trải nghiệm khách).
      *
      * @param  array<int, string>  $recipients
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
      */
-    public function notifySales(Contact $contact, array $recipients): void
+    public function notifySales(Contact $contact, array $recipients, array $overrides = []): array
     {
+        if ($contact->exists) {
+            Contact::ensureLeadSchema();
+        }
+
         if (empty($recipients)) {
-            Log::info('Lead #' . $contact->id . ' saved without Sales email because no recipient is configured.');
+            $reason = 'Chưa cấu hình Email Sales nhận lead trong Admin > Cấu hình hệ thống.';
+            Log::info('Lead #' . ($contact->id ?: 'test') . ' saved without Sales email because no recipient is configured.');
+            $this->persistMailTracking($contact, 'skipped', $reason);
+
+            return [
+                'ok' => false,
+                'status' => 'skipped',
+                'mailer' => 'none',
+                'from' => '',
+                'recipients' => [],
+                'host' => '',
+                'port' => null,
+                'error' => $reason,
+            ];
+        }
+
+        $mailConfig = $this->resolveMailRuntimeConfig($overrides);
+        $mailable = new ContactMail($contact, $mailConfig['from_address'], $mailConfig['from_name']);
+        $delivery = $this->deliverMailable($recipients, $mailable, $mailConfig);
+
+        $this->persistMailTracking($contact, $delivery['status'], $delivery['error']);
+
+        return [
+            'ok' => $delivery['status'] === 'sent',
+            'status' => $delivery['status'],
+            'mailer' => $delivery['mailer'],
+            'from' => $mailConfig['from_address'],
+            'recipients' => $recipients,
+            'host' => $mailConfig['host'],
+            'port' => $mailConfig['port'],
+            'error' => $delivery['error'],
+        ];
+    }
+
+    /**
+     * Tổng hợp cấu hình gửi email hiệu lực từ Admin System + .env (tự fix SSL 465 & From Email).
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    public function resolveMailRuntimeConfig(array $overrides = []): array
+    {
+        $dbSystems = $this->getDbSystems();
+
+        $pick = static function (string $key) use ($overrides, $dbSystems): string {
+            if (array_key_exists($key, $overrides) && $overrides[$key] !== null) {
+                return trim((string) $overrides[$key]);
+            }
+            return trim((string) ($dbSystems[$key] ?? ''));
+        };
+
+        $selectedMailer = strtolower($pick('mail_mailer') ?: 'auto');
+        $dbHost = $pick('mail_host');
+        $dbPort = $pick('mail_port');
+        $dbEnc = strtolower($pick('mail_encryption'));
+        $dbUser = $pick('mail_username');
+        $dbFrom = $pick('mail_from_address');
+        $dbFromName = $pick('mail_from_name');
+
+        if (!empty($overrides['clear_mail_password'])) {
+            $dbPass = '';
+        } elseif (array_key_exists('mail_password', $overrides) && trim((string) $overrides['mail_password']) !== '') {
+            $dbPass = (string) $overrides['mail_password'];
+        } else {
+            $dbPass = $this->decryptSecret($dbSystems['mail_password'] ?? null);
+        }
+
+        $envDefault = strtolower(trim((string) config('mail.default', 'log')));
+        $envSmtp = (array) config('mail.mailers.smtp', []);
+        $envHost = trim((string) ($envSmtp['host'] ?? ''));
+        $envPort = trim((string) ($envSmtp['port'] ?? ''));
+        $envEnc = strtolower(trim((string) ($envSmtp['encryption'] ?? '')));
+        $envUser = trim((string) ($envSmtp['username'] ?? ''));
+        $envPass = (string) ($envSmtp['password'] ?? '');
+        $envFromAddr = trim((string) config('mail.from.address', ''));
+        $envFromName = trim((string) config('mail.from.name', ''));
+
+        $effectiveMailer = $selectedMailer;
+        $autoFallbackPhpMail = false;
+
+        $requestHost = '';
+        if (app()->bound('request') && request()) {
+            $requestHost = strtolower((string) request()->getHost());
+        }
+        $isPublicHostingLinux = PHP_OS_FAMILY === 'Linux'
+            && !app()->runningUnitTests()
+            && !app()->environment('testing')
+            && (
+                app()->environment('production')
+                || (
+                    $requestHost !== ''
+                    && !in_array($requestHost, ['localhost', '127.0.0.1', '::1'], true)
+                    && !str_ends_with($requestHost, '.local')
+                    && !str_ends_with($requestHost, '.test')
+                )
+            );
+
+        if ($effectiveMailer === 'auto' || $effectiveMailer === '') {
+            if (app()->runningUnitTests() && $envDefault === 'array' && empty($overrides) && $dbHost === '') {
+                $effectiveMailer = 'array';
+            } elseif ($dbHost !== '') {
+                $effectiveMailer = 'smtp';
+            } elseif (!in_array($envDefault, ['', 'log', 'array'], true)) {
+                $effectiveMailer = $envDefault;
+            } elseif ($isPublicHostingLinux) {
+                if ($this->canUseSendmail()) {
+                    $effectiveMailer = 'sendmail';
+                    $autoFallbackPhpMail = function_exists('mail');
+                } elseif (function_exists('mail')) {
+                    $effectiveMailer = 'php_mail';
+                } else {
+                    $effectiveMailer = 'log';
+                }
+            } else {
+                $effectiveMailer = 'log';
+            }
+        }
+
+        $usingDbSmtp = ($dbHost !== '');
+        $host = $usingDbSmtp ? $dbHost : ($envHost !== '' && $envDefault === 'smtp' ? $envHost : '');
+        if ($host === '' && $effectiveMailer === 'smtp' && $envHost !== '' && $envHost !== '127.0.0.1') {
+            $host = $envHost;
+        }
+        $enc = $usingDbSmtp ? ($dbEnc !== '' ? $dbEnc : 'tls') : $envEnc;
+        if (!in_array($enc, ['tls', 'ssl', 'none', ''], true)) {
+            $enc = 'tls';
+        }
+        $portRaw = $usingDbSmtp ? $dbPort : $envPort;
+        $port = ($portRaw !== '' && ctype_digit($portRaw))
+            ? (int) $portRaw
+            : ($enc === 'ssl' ? 465 : ($enc === 'none' ? 25 : 587));
+        $user = $usingDbSmtp ? $dbUser : ($dbUser !== '' ? $dbUser : $envUser);
+        $pass = $usingDbSmtp ? $dbPass : ($dbPass !== '' ? $dbPass : $envPass);
+
+        $fromAddress = $this->resolveFromAddress($dbFrom, $envFromAddr, $user);
+        $fromName = $dbFromName !== ''
+            ? $dbFromName
+            : (($envFromName !== '' && !in_array($envFromName, ['Example', 'Laravel'], true)) ? $envFromName : 'DATYSO Website');
+
+        return [
+            'configured_mailer' => $selectedMailer,
+            'mailer' => $effectiveMailer,
+            'host' => $host,
+            'port' => $port,
+            'encryption' => $enc === '' ? 'tls' : $enc,
+            'username' => $user,
+            'password' => $pass,
+            'from_address' => $fromAddress,
+            'from_name' => $fromName,
+            'sendmail_path' => (string) config('mail.mailers.sendmail.path', '/usr/sbin/sendmail -bs -i'),
+            'auto_fallback_php_mail' => $autoFallbackPhpMail,
+        ];
+    }
+
+    /**
+     * Chẩn đoán nhanh trạng thái cấu hình gửi email (hiển thị trong Admin).
+     *
+     * @return array<string, mixed>
+     */
+    public function getMailDiagnostics(): array
+    {
+        $leadSettings = $this->getLeadSettings();
+        $mailConfig = $this->resolveMailRuntimeConfig();
+        $issues = [];
+
+        if (empty($leadSettings['sales_emails'])) {
+            $issues[] = 'Chưa nhập Email Sales nhận lead.';
+        }
+
+        if ($mailConfig['mailer'] === 'log') {
+            $issues[] = PHP_OS_FAMILY === 'Windows'
+                ? 'Đang ở chế độ "log" (máy Local Windows): mail chỉ ghi vào storage/logs/laravel.log. Hãy chọn SMTP (Gmail / Mail Hosting / Microsoft 365) bên dưới để gửi mail thật.'
+                : 'Hệ thống đang dùng MAIL_MAILER=log nên không gửi mail ra ngoài. Hãy cấu hình SMTP hoặc chọn Sendmail / PHP mail() bên dưới.';
+        } elseif ($mailConfig['mailer'] === 'smtp' && $mailConfig['host'] === '') {
+            $issues[] = 'Đã chọn SMTP nhưng chưa nhập SMTP Host.';
+        }
+
+        if ($mailConfig['from_address'] === 'hello@example.com') {
+            $issues[] = 'Địa chỉ From Email vẫn đang là mặc định hello@example.com, rất dễ bị Microsoft 365 / Gmail từ chối.';
+        }
+
+        return [
+            'ready' => empty($issues),
+            'sales_emails' => $leadSettings['sales_emails'],
+            'configured_mailer' => $mailConfig['configured_mailer'],
+            'effective_mailer' => $mailConfig['mailer'],
+            'host' => $mailConfig['host'],
+            'port' => $mailConfig['port'],
+            'encryption' => $mailConfig['encryption'],
+            'from_address' => $mailConfig['from_address'],
+            'from_name' => $mailConfig['from_name'],
+            'issues' => $issues,
+        ];
+    }
+
+    /**
+     * Gửi email kiểm tra ngay từ Admin > Cấu hình hệ thống mà không lưu rác vào danh sách Lead.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    public function sendTestMail(?string $rawRecipient = null, array $overrides = []): array
+    {
+        $targetRaw = trim((string) $rawRecipient);
+        if ($targetRaw === '' && !empty($overrides['lead_sales_email'])) {
+            $targetRaw = trim((string) $overrides['lead_sales_email']);
+        }
+
+        $recipients = $this->parseEmails($targetRaw);
+        if (empty($recipients)) {
+            $recipients = $this->getLeadSettings()['sales_emails'];
+        }
+
+        if (empty($recipients)) {
+            return [
+                'ok' => false,
+                'status' => 'skipped',
+                'message' => 'Vui lòng nhập địa chỉ Email nhận test (hoặc Email Sales nhận lead) hợp lệ.',
+            ];
+        }
+
+        $testContact = new Contact([
+            'username' => 'Kiểm tra gửi Email - DATYSO',
+            'phone' => '0963535196',
+            'province' => 'Hà Nội',
+            'demand' => 'Đây là email kiểm tra kết nối gửi Lead tự động từ Website DATYSO.',
+            'source_type' => 'contact',
+            'source_name' => 'Kiểm tra cấu hình Email Admin',
+            'source_url' => url('/admin/system'),
+        ]);
+        $testContact->created_at = now();
+
+        $res = $this->notifySales($testContact, $recipients, $overrides);
+        $targetStr = implode(', ', $recipients);
+
+        if ($res['status'] === 'sent') {
+            $via = $res['mailer'] === 'smtp'
+                ? "SMTP ({$res['host']}:{$res['port']})"
+                : strtoupper((string) $res['mailer']);
+            return [
+                'ok' => true,
+                'status' => 'sent',
+                'mailer' => $res['mailer'],
+                'from' => $res['from'],
+                'recipients' => $recipients,
+                'message' => "Đã gửi email kiểm tra thành công tới {$targetStr} (từ {$res['from']} qua {$via}). Nếu chưa thấy ở Hộp thư đến, vui lòng kiểm tra thêm thư mục Spam/Junk.",
+            ];
+        }
+
+        if ($res['status'] === 'logged') {
+            return [
+                'ok' => false,
+                'status' => 'logged',
+                'mailer' => 'log',
+                'from' => $res['from'],
+                'recipients' => $recipients,
+                'message' => (string) ($res['error'] ?: 'Hệ thống đang dùng MAIL_MAILER=log nên mail chưa được gửi ra ngoài.'),
+            ];
+        }
+
+        return [
+            'ok' => false,
+            'status' => $res['status'],
+            'mailer' => $res['mailer'],
+            'from' => $res['from'],
+            'recipients' => $recipients,
+            'message' => 'Gửi email thất bại (' . $res['mailer'] . '): ' . ($res['error'] ?: 'Lỗi không xác định.'),
+        ];
+    }
+
+    /**
+     * Thực thi gửi Mailable qua MailManager (kèm tự fallback Hosting & giữ nguyên Mail::fake()/Mockery cho test).
+     *
+     * @param  array<int, string>  $recipients
+     * @param  array<string, mixed>  $mailConfig
+     * @return array{status: string, mailer: string, error: ?string}
+     */
+    private function deliverMailable(array $recipients, ContactMail $mailable, array $mailConfig): array
+    {
+        $mailRoot = Mail::getFacadeRoot();
+        if (!($mailRoot instanceof MailManager) || $mailRoot instanceof \Mockery\MockInterface) {
+            try {
+                Mail::to($recipients)->send($mailable);
+                return ['status' => 'sent', 'mailer' => 'test_double', 'error' => null];
+            } catch (\Throwable $e) {
+                Log::error('Failed to send Sales lead email: ' . $e->getMessage());
+                return ['status' => 'failed', 'mailer' => 'test_double', 'error' => Str::limit($e->getMessage(), 1500, '')];
+            }
+        }
+
+        $mailer = $mailConfig['mailer'];
+
+        if ($mailer === 'log') {
+            try {
+                Mail::mailer('log')->to($recipients)->send($mailable);
+            } catch (\Throwable $e) {
+                Log::warning('Log mailer write error: ' . $e->getMessage());
+            }
+
+            return [
+                'status' => 'logged',
+                'mailer' => 'log',
+                'error' => 'Hệ thống đang dùng MAIL_MAILER=log nên email chỉ được ghi vào storage/logs/laravel.log, chưa gửi tới hộp thư Sales. Hãy cấu hình SMTP trong Admin > Cấu hình hệ thống.',
+            ];
+        }
+
+        if ($mailer === 'smtp' && $mailConfig['host'] === '') {
+            $err = 'Chưa cấu hình SMTP Host trong Admin > Cấu hình hệ thống hoặc biến MAIL_HOST trong .env.';
+            Log::error('Lead mail failed: ' . $err);
+            return ['status' => 'failed', 'mailer' => 'smtp', 'error' => $err];
+        }
+
+        if ($mailer === 'sendmail' && PHP_OS_FAMILY === 'Windows') {
+            $err = 'Sendmail chỉ khả dụng trên Hosting Linux; trên máy Local Windows vui lòng cấu hình SMTP.';
+            Log::error('Lead mail failed: ' . $err);
+            return ['status' => 'failed', 'mailer' => 'sendmail', 'error' => $err];
+        }
+
+        $previousFrom = config('mail.from');
+        try {
+            config([
+                'mail.from.address' => $mailConfig['from_address'],
+                'mail.from.name' => $mailConfig['from_name'],
+            ]);
+
+            if ($mailer === 'array') {
+                Mail::mailer('array')->to($recipients)->send($mailable);
+                return ['status' => 'sent', 'mailer' => 'array', 'error' => null];
+            }
+
+            $runtimeDef = $this->buildRuntimeMailerDefinition($mailer, $mailConfig);
+            $this->sendThroughRuntimeMailer('lead_runtime', $runtimeDef, $recipients, $mailable);
+
+            return ['status' => 'sent', 'mailer' => $mailer, 'error' => null];
+        } catch (\Throwable $e) {
+            if ($mailer === 'sendmail' && !empty($mailConfig['auto_fallback_php_mail']) && function_exists('mail')) {
+                try {
+                    $fallbackDef = $this->buildRuntimeMailerDefinition('php_mail', $mailConfig);
+                    $this->sendThroughRuntimeMailer('lead_runtime_fallback', $fallbackDef, $recipients, $mailable);
+                    return ['status' => 'sent', 'mailer' => 'php_mail', 'error' => null];
+                } catch (\Throwable $fallbackEx) {
+                    Log::error('Failed both sendmail and php_mail fallback: ' . $fallbackEx->getMessage());
+                    return [
+                        'status' => 'failed',
+                        'mailer' => 'sendmail+php_mail',
+                        'error' => Str::limit($e->getMessage() . ' | Fallback PHP mail(): ' . $fallbackEx->getMessage(), 1500, ''),
+                    ];
+                }
+            }
+
+            Log::error('Failed to send Sales lead email (' . $mailer . '): ' . $e->getMessage());
+            return [
+                'status' => 'failed',
+                'mailer' => $mailer,
+                'error' => Str::limit($e->getMessage(), 1500, ''),
+            ];
+        } finally {
+            config(['mail.from' => $previousFrom]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $mailConfig
+     * @return array<string, mixed>
+     */
+    private function buildRuntimeMailerDefinition(string $mailer, array $mailConfig): array
+    {
+        if ($mailer === 'php_mail') {
+            return ['transport' => 'php_mail'];
+        }
+
+        if ($mailer === 'sendmail') {
+            return [
+                'transport' => 'sendmail',
+                'path' => $mailConfig['sendmail_path'],
+            ];
+        }
+
+        $enc = $mailConfig['encryption'];
+        $port = (int) $mailConfig['port'];
+        $scheme = ($enc === 'ssl' || $port === 465) ? 'smtps' : 'smtp';
+
+        return [
+            'transport' => 'smtp',
+            'scheme' => $scheme,
+            'host' => $mailConfig['host'],
+            'port' => $port,
+            'encryption' => $enc === 'none' ? null : $enc,
+            'auto_tls' => $enc !== 'none',
+            'username' => $mailConfig['username'] !== '' ? $mailConfig['username'] : null,
+            'password' => $mailConfig['password'] !== '' ? $mailConfig['password'] : null,
+            'timeout' => 15,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $mailerDef
+     * @param  array<int, string>  $recipients
+     */
+    private function sendThroughRuntimeMailer(string $mailerName, array $mailerDef, array $recipients, ContactMail $mailable): void
+    {
+        config(["mail.mailers.{$mailerName}" => $mailerDef]);
+        Mail::purge($mailerName);
+        Mail::mailer($mailerName)->to($recipients)->send($mailable);
+    }
+
+    private function resolveFromAddress(string $dbFrom, string $envFrom, string $smtpUser): string
+    {
+        if ($dbFrom !== '' && filter_var($dbFrom, FILTER_VALIDATE_EMAIL)) {
+            return $dbFrom;
+        }
+
+        $placeholders = ['hello@example.com', 'example@example.com', 'mail@example.com'];
+        if ($envFrom !== '' && !in_array(strtolower($envFrom), $placeholders, true) && filter_var($envFrom, FILTER_VALIDATE_EMAIL)) {
+            return $envFrom;
+        }
+
+        if ($smtpUser !== '' && filter_var($smtpUser, FILTER_VALIDATE_EMAIL)) {
+            return $smtpUser;
+        }
+
+        $host = '';
+        if (app()->bound('request') && request()) {
+            $host = strtolower((string) request()->getHost());
+        }
+        if ($host === '') {
+            $host = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+        }
+
+        $host = preg_replace('/^www\./', '', $host);
+        if (
+            $host !== ''
+            && !in_array($host, ['localhost', '127.0.0.1', '::1'], true)
+            && !filter_var($host, FILTER_VALIDATE_IP)
+            && str_contains($host, '.')
+        ) {
+            return 'noreply@' . $host;
+        }
+
+        return 'noreply@datyso.com';
+    }
+
+    private function canUseSendmail(): bool
+    {
+        if (!function_exists('proc_open')) {
+            return false;
+        }
+
+        $disabled = array_map('trim', explode(',', strtolower((string) ini_get('disable_functions'))));
+        if (in_array('proc_open', $disabled, true)) {
+            return false;
+        }
+
+        $sendmailBin = strtok((string) config('mail.mailers.sendmail.path', '/usr/sbin/sendmail -bs -i'), ' ');
+        return $sendmailBin !== '' && @is_executable($sendmailBin);
+    }
+
+    private function decryptSecret(?string $raw): string
+    {
+        $val = trim((string) $raw);
+        if ($val === '') {
+            return '';
+        }
+
+        try {
+            return (string) Crypt::decryptString($val);
+        } catch (DecryptException $e) {
+            return $val;
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    private function persistMailTracking(Contact $contact, string $status, ?string $error): void
+    {
+        if (!$contact->exists) {
             return;
         }
 
         try {
-            Mail::to($recipients)->send(new ContactMail($contact));
+            $contact->mail_status = $status;
+            $contact->mail_error = $error ? Str::limit($error, 2000, '') : null;
+            if ($status === 'sent') {
+                $contact->mail_sent_at = now();
+            }
+            $contact->save();
         } catch (\Throwable $e) {
-            Log::error('Failed to send Sales lead email for Contact #' . $contact->id . ': ' . $e->getMessage());
+            Log::warning('Could not persist mail tracking for Contact #' . $contact->id . ': ' . $e->getMessage());
         }
     }
 
@@ -455,3 +955,4 @@ class LeadService
         return array_values(array_unique($valid));
     }
 }
+

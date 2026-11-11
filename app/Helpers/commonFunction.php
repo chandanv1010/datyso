@@ -80,15 +80,45 @@ if(!function_exists('convert_array')){
 
 
 if(!function_exists('renderSystemInput')){
-    function renderSystemInput(string $name = '', $systems = null){
+    function renderSystemInput(string $name = '', $systems = null, array $item = []){
+        $value = old('config.' . $name, old($name, ($systems[$name]) ?? ''));
+        $placeholder = $item['placeholder'] ?? '';
         return '<input 
             type="text"
-            name="config['.$name.']"
-            value="'.old($name, ($systems[$name]) ?? '').'"
+            id="system-field-'.e($name).'"
+            name="config['.e($name).']"
+            value="'.e((string) $value).'"
             class="form-control"
-            placeholder=""
+            placeholder="'.e((string) $placeholder).'"
             autocomplete="off"
         >';
+    }
+}
+
+if(!function_exists('renderSystemPassword')){
+    function renderSystemPassword(string $name = '', $systems = null, array $item = []){
+        $hasSaved = !empty($systems[$name]);
+        $placeholder = $hasSaved
+            ? '•••••••• (Đã lưu mật khẩu — để trống nếu giữ nguyên)'
+            : ($item['placeholder'] ?? '');
+        $html = '<input 
+            type="password"
+            id="system-field-'.e($name).'"
+            name="config['.e($name).']"
+            value=""
+            class="form-control"
+            placeholder="'.e((string) $placeholder).'"
+            autocomplete="new-password"
+        >';
+        if ($hasSaved) {
+            $html .= '<div class="d-flex align-items-center justify-content-between mt-1">'
+                . '<small class="text-success fw-semibold">&#10003; Đã lưu mật khẩu SMTP (đã mã hóa an toàn)</small>'
+                . '<label class="small text-muted mb-0" style="cursor:pointer;">'
+                . '<input type="checkbox" name="clear_config[]" value="'.e($name).'" class="me-1"> Xóa mật khẩu cũ'
+                . '</label>'
+                . '</div>';
+        }
+        return $html;
     }
 }
 
@@ -133,9 +163,10 @@ if(!function_exists('renderSystemTitle')){
 
 if(!function_exists('renderSystemSelect')){
     function renderSystemSelect(array $item, string $name = '', $systems = null){
-       $html = '<select name="config['.$name.']" class="form-control">';
+       $selectedValue = (string) old('config.' . $name, old($name, ($systems[$name]) ?? ($item['default'] ?? '')));
+       $html = '<select id="system-field-'.e($name).'" name="config['.e($name).']" class="form-control">';
             foreach($item['option'] as $key => $val){
-                $html .= '<option '.((isset($systems[$name]) && $key == $systems[$name]) ? 'selected' : '').' value="'.$key.'">'.$val.'</option>';
+                $html .= '<option '.(((string) $key === $selectedValue) ? 'selected' : '').' value="'.e((string) $key).'">'.e((string) $val).'</option>';
             }
        $html .= '</select>';
 

@@ -17,6 +17,10 @@ class Contact extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'mail_sent_at' => 'datetime',
+    ];
+
     protected static bool $leadSchemaEnsured = false;
 
     public function product()
@@ -51,7 +55,10 @@ class Contact extends Model
                 || !Schema::hasColumn('m_contact', 'source_type')
                 || !Schema::hasColumn('m_contact', 'source_name')
                 || !Schema::hasColumn('m_contact', 'source_url')
-                || !Schema::hasColumn('m_contact', 'ip_address');
+                || !Schema::hasColumn('m_contact', 'ip_address')
+                || !Schema::hasColumn('m_contact', 'mail_status')
+                || !Schema::hasColumn('m_contact', 'mail_error')
+                || !Schema::hasColumn('m_contact', 'mail_sent_at');
 
             $emailNotNullable = false;
             $driver = DB::getDriverName();
@@ -97,6 +104,15 @@ class Contact extends Model
                     }
                     if (!Schema::hasColumn('m_contact', 'ip_address')) {
                         $table->string('ip_address', 45)->nullable()->after('source_url');
+                    }
+                    if (!Schema::hasColumn('m_contact', 'mail_status')) {
+                        $table->string('mail_status', 30)->nullable()->after('ip_address');
+                    }
+                    if (!Schema::hasColumn('m_contact', 'mail_error')) {
+                        $table->text('mail_error')->nullable()->after('mail_status');
+                    }
+                    if (!Schema::hasColumn('m_contact', 'mail_sent_at')) {
+                        $table->timestamp('mail_sent_at')->nullable()->after('mail_error');
                     }
                 });
             }

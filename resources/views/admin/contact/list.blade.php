@@ -17,7 +17,18 @@
 </div>
 <div class="bg-white mx-3 p-3 shadow-sm">
     @include('admin.core.alert')
-    <div class="d-flex justify-content-between">
+    @if(isset($mailDiagnostics) && !$mailDiagnostics['ready'])
+        <div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2" role="alert">
+            <div class="small">
+                <strong>&#9888; Cảnh báo gửi Email Sales:</strong>
+                {{ implode(' ', $mailDiagnostics['issues']) }}
+            </div>
+            <a href="{{ route('admin.system.index') }}" class="btn btn-sm btn-warning fw-semibold">
+                Cấu hình Email / SMTP ngay
+            </a>
+        </div>
+    @endif
+    <div class="d-flex justify-content-between mb-3">
         <h1 class="fs-3 m-0">
             Danh sách liên hệ
         </h1>
@@ -33,6 +44,7 @@
                     <th scope="col" class="text-center">Sản phẩm / Danh mục</th>
                     <th scope="col" class="text-center">Nhu cầu</th>
                     <th scope="col" class="text-center">Thời gian</th>
+                    <th scope="col" class="text-center">Mail Sales</th>
                     <th scope="col" class="text-center">Trạng thái</th>
                     <th scope="col" class="text-center" width="10%">Xử lý</th>
                     <th scope="col" class="text-center" width="8%">Chi tiết</th>
@@ -71,6 +83,25 @@
                         </td>
                         <td class="text-center small text-nowrap">
                             {{ optional($contact->created_at)->format('d/m/Y H:i') }}
+                        </td>
+                        <td class="text-center small">
+                            @if($contact->mail_status === 'sent')
+                                <span class="badge bg-success">Đã gửi</span>
+                            @elseif($contact->mail_status === 'logged')
+                                <span class="badge bg-warning text-dark" title="{{ $contact->mail_error }}">Chỉ ghi Log</span>
+                            @elseif($contact->mail_status === 'failed')
+                                <span class="badge bg-danger" title="{{ $contact->mail_error }}">Gửi lỗi</span>
+                            @elseif($contact->mail_status === 'skipped')
+                                <span class="badge bg-secondary" title="{{ $contact->mail_error }}">Chưa cấu hình</span>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                            <form action="{{ route('admin.contact.resendMail', ['id' => $contact->id]) }}" method="POST" class="mt-1">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size: 11px;">
+                                    Gửi mail
+                                </button>
+                            </form>
                         </td>
                         <td class="text-center" style="padding: 7px 0 0 42px;">
                             <div class="form-check form-switch">
@@ -137,6 +168,18 @@
                                                 <label class="fw-medium font-weight-bold">Nhu cầu / Nội dung:</label>
                                                 <div class="border rounded p-2 bg-light">{!! nl2br(e($contact->demand ?: strip_tags((string) $contact->content))) !!}</div>
                                             </div>
+                                            @if(!empty($contact->mail_status))
+                                                <div class="mb-3 p-2 border rounded bg-light small">
+                                                    <strong>Trạng thái Mail Sales:</strong>
+                                                    <code>{{ $contact->mail_status }}</code>
+                                                    @if($contact->mail_sent_at)
+                                                        ({{ $contact->mail_sent_at->format('H:i:s d/m/Y') }})
+                                                    @endif
+                                                    @if(!empty($contact->mail_error))
+                                                        <div class="text-danger mt-1">{{ $contact->mail_error }}</div>
+                                                    @endif
+                                                </div>
+                                            @endif
                                             @if ($contact->product)
                                                 <div>
                                                     <label class="fw-medium font-weight-bold">Sản phẩm liên kết:</label>

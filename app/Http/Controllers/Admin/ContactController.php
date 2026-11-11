@@ -15,11 +15,37 @@ class ContactController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(LeadService $leadService)
     {
         Contact::ensureLeadSchema();
         $contacts = Contact::with(['product', 'category'])->orderBy('created_at', 'desc')->get();
-        return view('admin.contact.list', ['contacts' => $contacts]);
+        $mailDiagnostics = $leadService->getMailDiagnostics();
+
+        return view('admin.contact.list', [
+            'contacts' => $contacts,
+            'mailDiagnostics' => $mailDiagnostics,
+        ]);
+    }
+
+    public function resendMail($id, LeadService $leadService)
+    {
+        Contact::ensureLeadSchema();
+        $contact = Contact::with(['product', 'category'])->find($id);
+        if (!$contact) {
+            return redirect()->route('admin.contact.index')->with('messageError', config('message.data_not_found'));
+        }
+
+        $settings = $leadService->getLeadSettings();
+        $result = $leadService->notifySales($contact, $settings['sales_emails']);
+
+        if (!empty($result['ok'])) {
+            $toList = implode(', ', $result['recipients']);
+            return redirect()->route('admin.contact.index')
+                ->with('messageSuccess', "Đã gửi lại email Lead #{$contact->id} tới {$toList} qua {$result['mailer']}.");
+        }
+
+        return redirect()->route('admin.contact.index')
+            ->with('messageError', "Chưa thể gửi email Lead #{$contact->id}: " . ($result['error'] ?: 'Kiểm tra lại cấu hình Mail trong Cấu hình hệ thống.'));
     }
 
     /**
