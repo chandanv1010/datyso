@@ -38,25 +38,20 @@ class SystemController extends Controller {
     public function store(Request $request){
         DB::beginTransaction();
         try{
-            $config = $request->input('config');
-            $payload = [];
-            if(count($config)){
+            $config = $request->input('config', []);
+            if(is_array($config) && count($config)){
                 foreach($config as $key => $val){
-                    $payload = [
-                        'keyword' => $key,
-                        'content' => $val,
-                    ];
-                    $condition = ['keyword' => $key];
-                    System::updateOrInsert($payload, $condition);
+                    System::updateOrInsert(
+                        ['keyword' => $key],
+                        ['content' => is_string($val) ? trim($val) : $val]
+                    );
                 }
             }
             DB::commit();
-            return redirect()->back();
+            return redirect()->back()->with('messageSuccess', 'Lưu cấu hình hệ thống thành công.');
         }catch(\Exception $e ){
             DB::rollBack();
-            // Log::error($e->getMessage());
-            echo $e->getMessage();die();
-            // return false;
+            return redirect()->back()->with('messageError', 'Lưu cấu hình thất bại: ' . $e->getMessage());
         }
     }
 }

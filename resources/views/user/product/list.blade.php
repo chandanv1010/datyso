@@ -234,9 +234,20 @@
                             </div>
                         </div>
                     @endif
+
+                    <div class="mt-4">
+                        <x-lead-quote-form
+                            source-type="category"
+                            :category-id="$category->id"
+                            :source-name="$category->name"
+                            :source-url="url()->current()"
+                            :title="'Nhận báo giá & Tư vấn ' . $category->name"
+                        />
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 @endsection
 @section('footer')
+@endsection

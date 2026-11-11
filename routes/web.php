@@ -212,7 +212,7 @@ Route::middleware([Views::class])->group(function () {
     
         Route::prefix('lien-he')->name('contact.')->group(function () {
             Route::get('/', 'getContact')->name('index');
-            Route::post('/register', 'postContactForm')->name('register');
+            Route::post('/register', 'postContactForm')->middleware('throttle:20,1')->name('register');
         });
     
         Route::prefix('giai-phap')->name('solution.')->group(function () {

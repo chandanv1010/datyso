@@ -27,22 +27,51 @@
         <table id="myTable" class="table table-striped table-bordered table-hover">
             <thead class="thead-dark">
                 <tr>
-                    <th scope="col" class="text-center" width="5%">#</th>.
-                    <th scope="col" class="text-center">Tên người dùng</th>
-                    <th scope="col" class="text-center">Email</th>
-                    <th scope="col" class="text-center">Phone</th>
+                    <th scope="col" class="text-center" width="5%">#</th>
+                    <th scope="col" class="text-center">Khách hàng</th>
+                    <th scope="col" class="text-center">SĐT &amp; Tỉnh/thành</th>
+                    <th scope="col" class="text-center">Sản phẩm / Danh mục</th>
+                    <th scope="col" class="text-center">Nhu cầu</th>
+                    <th scope="col" class="text-center">Thời gian</th>
                     <th scope="col" class="text-center">Trạng thái</th>
-                    <th scope="col" class="text-center"  width="10%">Xử lý</th>
-                    <th scope="col" class="text-center" width="10%"></th>
+                    <th scope="col" class="text-center" width="10%">Xử lý</th>
+                    <th scope="col" class="text-center" width="8%">Chi tiết</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($contacts as $contact)
                     <tr>
                         <th class="text-center"></th>
-                        <td class="text-center">{{ $contact->username }}</td>
-                        <td class="text-center">{{ $contact->email }}</td>
-                        <td class="text-center">{{ $contact->phone }}</td>
+                        <td>
+                            <div class="fw-semibold">{{ $contact->username }}</div>
+                            @if(!empty($contact->email))
+                                <small class="text-muted">{{ $contact->email }}</small>
+                            @endif
+                        </td>
+                        <td class="text-center">
+                            <a href="tel:{{ $contact->phone }}" class="fw-bold text-primary text-decoration-none d-block">{{ $contact->phone }}</a>
+                            @if(!empty($contact->province))
+                                <small class="text-muted">{{ $contact->province }}</small>
+                            @endif
+                        </td>
+                        <td>
+                            @if(!empty($contact->source_name) || $contact->product || $contact->category)
+                                <span class="badge bg-info text-dark mb-1">
+                                    {{ ($contact->source_type ?? '') === 'category' ? 'Danh mục' : (($contact->source_type ?? '') === 'product' ? 'Sản phẩm' : 'Liên hệ') }}
+                                </span>
+                                <div class="small fw-semibold">
+                                    {{ $contact->source_name ?: ($contact->product?->name ?? ($contact->category?->name ?? '')) }}
+                                </div>
+                            @else
+                                <span class="text-muted small">Trang liên hệ</span>
+                            @endif
+                        </td>
+                        <td>
+                            <div class="small" style="max-width: 260px; white-space: pre-line;">{{ \Illuminate\Support\Str::limit($contact->demand ?: strip_tags((string) $contact->content), 120) }}</div>
+                        </td>
+                        <td class="text-center small text-nowrap">
+                            {{ optional($contact->created_at)->format('d/m/Y H:i') }}
+                        </td>
                         <td class="text-center" style="padding: 7px 0 0 42px;">
                             <div class="form-check form-switch">
                                 <form action="{{ route('admin.contact.status', ['id' => $contact->id]) }}" method="POST"
@@ -71,7 +100,7 @@
                                 </form>
                             </div>
                         </td>
-                            <td class="text-center">
+                        <td class="text-center">
                             <a href="#" data-bs-toggle="modal" data-bs-target="#info{{ $contact->id }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="1.3em" height="1.3em" fill="currentColor"
                                     class="bi bi-info-circle text-dark mt-n1" viewBox="0 0 16 16">
@@ -85,24 +114,44 @@
                                 <div class="modal-dialog modal-lg">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h1 class="modal-title fs-5 font-weight-bold" id="info{{ $contact->id }}Label">Thông tin
-                                                chi tiết</h1>
+                                            <h1 class="modal-title fs-5 font-weight-bold" id="info{{ $contact->id }}Label">Thông tin chi tiết Lead #{{ $contact->id }}</h1>
                                             <button type="button" class="btn-close p-3" data-bs-dismiss="modal"
                                                 aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body text-start">
-                                            <div id="custom-content">
-                                                <label for="" class="fw-medium font-weight-bold">Nội dung:</label>
-                                                <span>{!! $contact->content !!}</span>
+                                            <p><strong>Khách hàng:</strong> {{ $contact->username }}</p>
+                                            <p><strong>Số điện thoại:</strong> <a href="tel:{{ $contact->phone }}">{{ $contact->phone }}</a></p>
+                                            @if(!empty($contact->province))
+                                                <p><strong>Tỉnh/Thành phố:</strong> {{ $contact->province }}</p>
+                                            @endif
+                                            @if(!empty($contact->email))
+                                                <p><strong>Email:</strong> {{ $contact->email }}</p>
+                                            @endif
+                                            @if(!empty($contact->source_name))
+                                                <p><strong>Nguồn quan tâm:</strong> {{ $contact->source_name }} ({{ $contact->source_type }})</p>
+                                            @endif
+                                            @if(!empty($contact->source_url))
+                                                <p><strong>Trang gửi:</strong> <a href="{{ $contact->source_url }}" target="_blank" rel="noopener">{{ $contact->source_url }}</a></p>
+                                            @endif
+                                            <div id="custom-content" class="mb-3">
+                                                <label class="fw-medium font-weight-bold">Nhu cầu / Nội dung:</label>
+                                                <div class="border rounded p-2 bg-light">{!! nl2br(e($contact->demand ?: strip_tags((string) $contact->content))) !!}</div>
                                             </div>
-                                            <div>
-                                                <label for="">Thông tin sản phẩm</label>
+                                            @if ($contact->product)
                                                 <div>
-                                                    @if ($contact->product_id)
+                                                    <label class="fw-medium font-weight-bold">Sản phẩm liên kết:</label>
+                                                    <div>
                                                         <a target="_blank" href="{{ route('admin.product.update', ['id' => $contact->product->id]) }}">{{ $contact->product->name }}</a>
-                                                    @endif
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            @elseif ($contact->category)
+                                                <div>
+                                                    <label class="fw-medium font-weight-bold">Danh mục liên kết:</label>
+                                                    <div>
+                                                        <a target="_blank" href="{{ route('admin.category.update', ['id' => $contact->category->id]) }}">{{ $contact->category->name }}</a>
+                                                    </div>
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>

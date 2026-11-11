@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'lead' => [
+        'sales_email' => env('SALES_EMAIL', env('ADMIN_EMAIL')),
+        'google_sheet_webhook' => env('GOOGLE_SHEET_LEAD_WEBHOOK'),
+        'recaptcha_site_key' => env('RECAPTCHA_SITE_KEY'),
+        'recaptcha_secret_key' => env('RECAPTCHA_SECRET_KEY'),
+        'recaptcha_min_score' => (float) env('RECAPTCHA_MIN_SCORE', 0.5),
+    ],
+
 ];

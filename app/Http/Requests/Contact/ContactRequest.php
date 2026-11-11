@@ -23,11 +23,11 @@ class ContactRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'username' => 'required|max:255,',
-            'email' => 'required|max:150|email:filter|email',
+            'username' => 'required|max:255',
+            'email' => 'nullable|max:150|email:filter',
             'product_id' => 'nullable',
-            'phone' =>  ['required', 'max:10', 'regex:/^(0?)(3|5|7|8|9)[0-9]{8}$/'],
-            'content' => 'required'
+            'phone' => ['required', 'max:20', 'regex:/^0[235789][0-9]{8,9}$/'],
+            'content' => 'nullable|max:2000',
         ];
     }
 

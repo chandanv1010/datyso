@@ -91,11 +91,12 @@
                     </div>
                     @if($product->price === null || $product->price == 0)
                         <div class="my-3">
-                            <a href="{{ route('contact.index', ['san-pham' => $product->slug]) }}" class="btn btn-dark-blue w-100 p-2 fs-4">Liên hệ ngay</a>
+                            <a href="#lead-quote-section" class="btn btn-dark-blue w-100 p-2 fs-4 js-scroll-lead-form">Liên hệ ngay</a>
                         </div>
                     @else
-                        <div class="my-3">
+                        <div class="my-3 d-grid gap-2">
                             <a data-id="{{ $product->id }}" class="btn btn-dark-blue w-100 p-2 fs-4 btn-addtocart">Thêm vào giỏ hàng</a>
+                            <a href="#lead-quote-section" class="btn btn-outline-primary w-100 py-2 fw-semibold js-scroll-lead-form">Nhận báo giá / Tư vấn kỹ thuật</a>
                         </div>
                     @endif
 
@@ -235,6 +236,18 @@
                 </div>
             </div>
         @endif
+
+        <div class="container py-4">
+            <x-lead-quote-form
+                source-type="product"
+                :product-id="$product->id"
+                :category-id="$category->id"
+                :source-name="$product->name"
+                :source-url="url()->current()"
+                :value="(float) ($product->price_discount ?: ($product->price ?: 0))"
+                :title="'Nhận báo giá: ' . $product->name"
+            />
+        </div>
     </main>
 @endsection
 @section('footer')

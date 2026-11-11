@@ -4,6 +4,9 @@
 @php
     $url = route('admin.system.store')
 @endphp
+<div class="wrapper wrapper-content animated fadeInRight">
+    @include('admin.core.alert')
+</div>
 <form action="{{ $url }}" method="post" class="box">
     @csrf
     <div class="wrapper wrapper-content animated fadeInRight">

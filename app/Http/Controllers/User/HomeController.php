@@ -4,8 +4,10 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Contact\ContactRequest;
+use App\Http\Requests\Contact\LeadRequest;
 use App\Http\Requests\Customer\CreateRequest;
 use App\Http\Requests\UserProfile\UserProfileRequest;
+use App\Services\LeadService;
 use App\Mail\ContactMail;
 use App\Models\Address;
 use App\Models\Category;
@@ -590,28 +592,99 @@ class HomeController extends Controller
     public function getContact(Request $request)
     {
         $product = null;
-        if ($request->has('san-pham')) {
-            $product = Product::where([['slug', $request->input('san-pham')], ['status', 1]])->first();
-            if (!$product) $product = null;
+        $category = null;
+
+        if ($request->filled('san-pham')) {
+            $product = Product::with(['images', 'categories'])
+                ->where([['slug', $request->input('san-pham')], ['status', 1]])
+                ->first();
+            if ($product) {
+                $category = $product->categories->first();
+            }
         }
-        return view('user.contact.form', ['product' => $product]);
+
+        if (!$category && $request->filled('danh-muc')) {
+            $category = Category::where([['slug', $request->input('danh-muc')], ['status', 1]])->first();
+        }
+
+        $seoTitle = $product
+            ? 'Liên hệ báo giá ' . $product->name . ' | DATYSO'
+            : ($category
+                ? 'Liên hệ tư vấn ' . $category->name . ' | DATYSO'
+                : 'Liên hệ tư vấn & Báo giá máy công nghiệp | DATYSO');
+
+        $productImage = ($product && $product->images && $product->images->first())
+            ? getImageUrl($product->images->first()->image)
+            : '';
+
+        $seo = [
+            'meta_title' => $seoTitle,
+            'meta_keyword' => 'liên hệ DATYSO, báo giá máy công nghiệp, máy hàn laser, máy cắt laser fiber',
+            'meta_description' => 'Liên hệ Công ty Cổ phần DATYSO Việt Nam để được tư vấn kỹ thuật theo vật liệu, độ dày, sản lượng và nhận báo giá nhanh trong giờ làm việc.',
+            'meta_image' => $productImage,
+            'canonical' => route('contact.index'),
+        ];
+
+        return view('user.contact.form', [
+            'product' => $product,
+            'category' => $category,
+            'seo' => $seo,
+        ]);
     }
 
-    public function postContactForm(ContactRequest $request)
+    public function postContactForm(LeadRequest $request, LeadService $leadService)
     {
         try {
-            DB::beginTransaction();
-            $contact = new Contact();
-            $contact->fill($request->all());
-            $contact->save();
-            DB::commit();
+            $result = $leadService->createLead($request->validated(), $request);
+            $contact = $result['contact'];
+            $isDuplicate = (bool) ($result['is_duplicate'] ?? false);
 
-            Mail::to(env('ADMIN_EMAIL'))->send(new ContactMail($contact));
-            return redirect()->route('contact.index')->with('messageSuccess', config('message.contact_success'));
+            $productPrice = 0.0;
+            if ($contact->product) {
+                $productPrice = (float) ($contact->product->price_discount ?: ($contact->product->price ?: 0));
+            }
+
+            $leadPayload = [
+                'source_type' => $contact->source_type ?? 'contact',
+                'source_name' => $contact->source_name ?? '',
+                'product_id' => $contact->product_id,
+                'category_id' => $contact->category_id,
+                'province' => $contact->province ?? '',
+                'source_url' => $contact->source_url ?? $request->headers->get('referer', ''),
+                'value' => $productPrice,
+            ];
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => true,
+                    'duplicate' => $isDuplicate,
+                    'message' => LeadService::AUTO_REPLY_MESSAGE,
+                    'lead' => $leadPayload,
+                ]);
+            }
+
+            $redirectUrl = url()->previous() ?: route('contact.index');
+            if (!str_contains($redirectUrl, '#')) {
+                $redirectUrl .= '#lead-quote-section';
+            }
+
+            return redirect($redirectUrl)
+                ->with('messageSuccess', LeadService::AUTO_REPLY_MESSAGE)
+                ->with('leadSuccessData', $isDuplicate ? null : $leadPayload);
         } catch (\Throwable $th) {
-            DB::rollBack();
-            Log::error($th);
-            return redirect()->route('contact.index')->with('messageError', config('message.contact_failed'));
+            Log::error('Lead submission failed: ' . $th->getMessage(), ['exception' => $th]);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Hệ thống đang bận, vui lòng thử lại hoặc gọi trực tiếp Hotline 0963.535.196.',
+                ], 500);
+            }
+
+            return redirect()
+                ->back()
+                ->withInput($request->except(['hp_company_fax', '_form_ts', '_form_token', 'g_recaptcha_response']))
+                ->with('messageError', 'Hệ thống đang bận, vui lòng thử lại hoặc gọi Hotline 0963.535.196.');
         }
     }
 
