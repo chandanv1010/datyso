@@ -191,9 +191,17 @@ Route::middleware([Views::class])->group(function () {
     
         Route::get('/tim-kiem', 'search')->name('search');
     
+        // Route sản phẩm chỉ khớp theo path segment slug, tự động bỏ qua mọi query string (?utm_source=, ?gclid=, ?a=1, ...).
         Route::prefix('san-pham')->name('product.')->group(function () {
-            Route::get('/{categorySlug}', 'getProductList')->name('list');
-            Route::get('/{categorySlug}/chi-tiet/{productSlug}', 'getProductDetail')->name('detail');
+            Route::get('/{categorySlug}', 'getProductList')
+                ->where('categorySlug', '[^/]+')
+                ->name('list');
+            Route::get('/{categorySlug}/chi-tiet/{productSlug}', 'getProductDetail')
+                ->where([
+                    'categorySlug' => '[^/]+',
+                    'productSlug' => '[^/]+',
+                ])
+                ->name('detail');
         });
     
         Route::prefix('chinh-sach')->name('instruction.')->group(function () {

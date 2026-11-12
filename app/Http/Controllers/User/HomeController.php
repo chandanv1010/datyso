@@ -120,9 +120,9 @@ class HomeController extends Controller
         if ($categorySlug == 'danh-muc') {
             $category = Category::where('status', 1)->first();
         } else {
-            $category = Category::where([['slug', $categorySlug], ['status', 1]])->first();
+            $category = $this->findActiveCategory($categorySlug);
         }
-        if (!$category) {
+        if (! $category) {
             return redirect()->route('index');
         }
         $category->banner = getImageUrl($category->banner);
@@ -216,32 +216,24 @@ class HomeController extends Controller
         return view('user.product.list', ['category' => $category, 'products' => $products, 'seo' => $seo, 'schema' => $schema]);
     }
 
-    public function getProductDetail($categorySlug, $productSlug)
+    /**
+     * Hiển thị chi tiết sản phẩm theo danh mục và bỏ qua an toàn các tham số truy vấn lạ (?utm_..., ?gclid=, ?a=1).
+     */
+    public function getProductDetail(Request $request, string $categorySlug, string $productSlug)
     {
-        $category = Category::where([['slug', $categorySlug], ['status', 1]])->first();
-        if (!$category) {
+        $category = $this->findActiveCategory($categorySlug);
+        if (! $category) {
             return redirect()->route('index');
         }
 
-        $product = Product::with(['images'])->where([['slug', $productSlug], ['status', 1]])->first();
-        if (!$product) {
+        $product = $this->findActiveProduct($productSlug);
+        if (! $product) {
             return redirect()->route('index');
         }
         $productImage = ($product->images && $product->images->first()) ? $product->images->first()->image : '';
 
-        $checkProduct = $category->products()->where('m_products.id', $product->id)->first();
-        if (!$checkProduct) {
-            // Kiểm tra xem sản phẩm có thuộc danh mục con của danh mục này không
-            $categoryIds = $category->getAllChildrenIds();
-            $childCategory = $product->categories()->whereIn('m_category.id', $categoryIds)->where('m_category.status', 1)->first();
-            if ($childCategory) {
-                // 301 Redirect về URL chuẩn của danh mục con chính thức để tránh trùng lặp URL (canonical)
-                return redirect()->route('product.detail', [
-                    'categorySlug' => $childCategory->slug,
-                    'productSlug' => $product->slug,
-                ], 301);
-            }
-            return redirect()->route('index');
+        if ($redirect = $this->resolveProductDetailRedirect($category, $product, $request)) {
+            return $redirect;
         }
 
         $otherProducts = Product::where([['status', 1], ['id', '!=', $product->id]])->inRandomOrder()->limit(3)->get();
@@ -881,8 +873,11 @@ class HomeController extends Controller
     }
 
     public function search(Request $request) {
-        if (!isset($request['tu-khoa']) || empty($request['tu-khoa'])) return redirect()->route('index');
-        $searchKey = $request['tu-khoa'];
+        $rawKeyword = $request->input('tu-khoa');
+        if (! is_string($rawKeyword) || trim($rawKeyword) === '') {
+            return redirect()->route('index');
+        }
+        $searchKey = trim($rawKeyword);
         $data = Product::where('name', 'LIKE', '%' . $searchKey . '%')
                 ->with('categories')
                 ->where('del_flg', 1)
@@ -979,5 +974,80 @@ class HomeController extends Controller
                 $item->$imageColumn = getImageUrl($item->$imageColumn);
             }
         }
+    }
+
+    /**
+     * Tìm danh mục đang hoạt động theo slug đã lọc bỏ tham số truy vấn lạ.
+     */
+    private function findActiveCategory(?string $categorySlug): ?Category
+    {
+        $cleanSlug = $this->sanitizeSlug($categorySlug);
+        if ($cleanSlug === null) {
+            return null;
+        }
+
+        return Category::where([['slug', $cleanSlug], ['status', 1]])->first();
+    }
+
+    /**
+     * Tìm sản phẩm đang hoạt động kèm ảnh theo slug đã lọc bỏ tham số truy vấn lạ.
+     */
+    private function findActiveProduct(string $productSlug): ?Product
+    {
+        $cleanSlug = $this->sanitizeSlug($productSlug);
+        if ($cleanSlug === null) {
+            return null;
+        }
+
+        return Product::with(['images'])->where([['slug', $cleanSlug], ['status', 1]])->first();
+    }
+
+    /**
+     * Xác thực sản phẩm thuộc danh mục hiện tại hoặc 301 về danh mục con chuẩn (giữ nguyên query tracking).
+     */
+    private function resolveProductDetailRedirect(Category $category, Product $product, Request $request): ?\Illuminate\Http\RedirectResponse
+    {
+        $belongsToCategory = $category->products()->where('m_products.id', $product->id)->exists();
+        if ($belongsToCategory) {
+            return null;
+        }
+
+        // Kiểm tra xem sản phẩm có thuộc danh mục con của danh mục này không.
+        $categoryIds = $category->getAllChildrenIds();
+        $childCategory = $product->categories()
+            ->whereIn('m_category.id', $categoryIds)
+            ->where('m_category.status', 1)
+            ->first();
+
+        if ($childCategory) {
+            // 301 Redirect về URL chuẩn của danh mục con và giữ lại query string (UTM/gclid) để không mất đo lường.
+            $targetUrl = route('product.detail', [
+                'categorySlug' => $childCategory->slug,
+                'productSlug' => $product->slug,
+            ]);
+            $queryString = $request->getQueryString();
+            if (is_string($queryString) && $queryString !== '') {
+                $targetUrl .= '?' . $queryString;
+            }
+
+            return redirect()->to($targetUrl, 301);
+        }
+
+        return redirect()->route('index');
+    }
+
+    /**
+     * Chuẩn hóa slug route và loại bỏ phần query/fragment nếu xuất hiện ngoài ý muốn.
+     */
+    private function sanitizeSlug(?string $slug): ?string
+    {
+        if (! is_string($slug)) {
+            return null;
+        }
+
+        $clean = explode('?', explode('#', trim($slug))[0])[0];
+        $clean = trim($clean, '/');
+
+        return $clean !== '' ? $clean : null;
     }
 }

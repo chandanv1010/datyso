@@ -33,13 +33,29 @@ return [
     | Application Debug Mode
     |--------------------------------------------------------------------------
     |
-    | When your application is in debug mode, detailed error messages with
-    | stack traces will be shown on every error that occurs within your
-    | application. If disabled, a simple generic error page is shown.
+    | Mặc định tắt debug để trang lỗi (404/500) không lộ mã nguồn và cấu hình.
+    | Trên tên miền public (như datyso.com), ép debug = false ngay cả khi file
+    | .env trên hosting chưa kịp cập nhật APP_DEBUG=false.
     |
     */
 
-    'debug' => (bool) env('APP_DEBUG', false),
+    'debug' => (function (): bool {
+        $envDebug = filter_var(env('APP_DEBUG', false), FILTER_VALIDATE_BOOLEAN);
+        if (! $envDebug || env('APP_ENV', 'production') === 'production') {
+            return false;
+        }
+
+        $rawHost = (string) ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '');
+        $host = strtolower(explode(':', $rawHost)[0]);
+        if ($host === '') {
+            $host = strtolower((string) parse_url((string) env('APP_URL', ''), PHP_URL_HOST));
+        }
+
+        return $host === ''
+            || in_array($host, ['127.0.0.1', 'localhost', '::1'], true)
+            || str_ends_with($host, '.test')
+            || str_ends_with($host, '.local');
+    })(),
 
     /*
     |--------------------------------------------------------------------------
