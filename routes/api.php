@@ -17,19 +17,33 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::prefix('v1')->middleware([VerifyOdooApiKey::class])->group(function () {
-    // 1. Lấy danh sách lead (hỗ trợ phân trang, lọc since_id, trạng thái, ngày)
-    Route::get('/leads', [OdooLeadController::class, 'index'])->name('api.v1.leads.index');
+Route::prefix('v1')->group(function () {
+    // Endpoint kiểm tra trạng thái hoạt động của API
+    Route::get('/', function () {
+        return response()->json([
+            'success' => true,
+            'service' => 'DATYSO REST API',
+            'version' => 'v1',
+            'status' => 'operational',
+            'message' => 'DATYSO API v1 đang hoạt động bình thường. Vui lòng truy cập endpoint /api/v1/leads kèm API Key.',
+        ]);
+    })->name('api.v1.index');
 
-    // 2. Lấy chi tiết 1 lead theo ID
-    Route::get('/leads/{id}', [OdooLeadController::class, 'show'])->name('api.v1.leads.show');
+    // Các route nghiệp vụ cần xác thực bảo mật bằng API Key
+    Route::middleware([VerifyOdooApiKey::class])->group(function () {
+        // 1. Lấy danh sách lead (hỗ trợ phân trang, lọc since_id, trạng thái, ngày)
+        Route::get('/leads', [OdooLeadController::class, 'index'])->name('api.v1.leads.index');
 
-    // 3. Đánh dấu đồng bộ hàng loạt sang Odoo (bulk sync)
-    Route::post('/leads/mark-synced', [OdooLeadController::class, 'bulkMarkSynced'])->name('api.v1.leads.bulk-mark-synced');
+        // 2. Lấy chi tiết 1 lead theo ID
+        Route::get('/leads/{id}', [OdooLeadController::class, 'show'])->name('api.v1.leads.show');
 
-    // 4. Đánh dấu đồng bộ 1 lead theo ID
-    Route::post('/leads/{id}/mark-synced', [OdooLeadController::class, 'markSynced'])->name('api.v1.leads.mark-synced');
+        // 3. Đánh dấu đồng bộ hàng loạt sang Odoo (bulk sync)
+        Route::post('/leads/mark-synced', [OdooLeadController::class, 'bulkMarkSynced'])->name('api.v1.leads.bulk-mark-synced');
 
-    // 5. Cập nhật trạng thái xử lý lead từ Odoo về lại CMS
-    Route::post('/leads/{id}/status', [OdooLeadController::class, 'updateStatus'])->name('api.v1.leads.status');
+        // 4. Đánh dấu đồng bộ 1 lead theo ID
+        Route::post('/leads/{id}/mark-synced', [OdooLeadController::class, 'markSynced'])->name('api.v1.leads.mark-synced');
+
+        // 5. Cập nhật trạng thái xử lý lead từ Odoo về lại CMS
+        Route::post('/leads/{id}/status', [OdooLeadController::class, 'updateStatus'])->name('api.v1.leads.status');
+    });
 });

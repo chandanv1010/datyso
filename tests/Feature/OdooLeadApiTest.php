@@ -47,6 +47,17 @@ class OdooLeadApiTest extends TestCase
         ]);
     }
 
+    public function test_api_v1_root_returns_service_status(): void
+    {
+        $response = $this->getJson('/api/v1');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'status' => 'operational',
+            ]);
+    }
+
     public function test_unauthenticated_request_is_rejected_with_401(): void
     {
         $response = $this->getJson('/api/v1/leads');
