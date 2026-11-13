@@ -34,8 +34,8 @@
 
                     <div class="mt-4 pt-3 border-top border-light border-opacity-25">
                         <div class="small text-white-50">Hotline kỹ thuật &amp; báo giá nhanh</div>
-                        <a href="tel:0963535196" class="fs-4 fw-bold text-white text-decoration-none d-inline-block mt-1">
-                            0963.535.196
+                        <a href="tel:0968945633" class="fs-4 fw-bold text-white text-decoration-none d-inline-block mt-1">
+                            0968945633
                         </a>
                     </div>
                 </div>
@@ -122,7 +122,7 @@
                             id="{{ $uid }}-phone"
                             name="phone"
                             class="form-control @error('phone') is-invalid @enderror"
-                            placeholder="VD: 0963535196"
+                            placeholder="VD: 0968945633"
                             value="{{ old('phone') }}"
                             maxlength="20"
                             required
@@ -411,9 +411,9 @@
                         return;
                     }
 
-                    showBanner(section, '.js-lead-error', (res.data && res.data.message) ? res.data.message : 'Không thể gửi yêu cầu lúc này, vui lòng gọi Hotline 0963.535.196.');
+                    showBanner(section, '.js-lead-error', (res.data && res.data.message) ? res.data.message : 'Không thể gửi yêu cầu lúc này, vui lòng gọi Hotline 0968945633.');
                 }).catch(function () {
-                    showBanner(section, '.js-lead-error', 'Lỗi kết nối mạng, vui lòng thử lại hoặc gọi Hotline 0963.535.196.');
+                    showBanner(section, '.js-lead-error', 'Lỗi kết nối mạng, vui lòng thử lại hoặc gọi Hotline 0968945633.');
                 }).finally(function () {
                     form.dataset.submitting = '0';
                     if (submitBtn) submitBtn.disabled = false;

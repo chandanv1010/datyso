@@ -34,7 +34,7 @@
                     </div>
                     <div class="mx-2"></div>
                     <div>
-                        <span>Datysojsc@gmail.com</span>
+                        <span>support@datyso.vn</span>
                     </div>
                 </div>
                 <div class="mb-2 d-flex">
@@ -47,7 +47,7 @@
                     </div>
                     <div class="mx-2"></div>
                     <div>
-                        <span>0963.535.196</span>
+                        <span>0968945633</span>
                     </div>
                 </div>
                 <div class="mt-2">

@@ -60,7 +60,7 @@ class LeadRequest extends FormRequest
             'username.min' => 'Họ tên cần ít nhất :min ký tự.',
             'username.max' => 'Họ tên không được vượt quá :max ký tự.',
             'phone.required' => 'Vui lòng nhập số điện thoại.',
-            'phone.regex' => 'Số điện thoại Việt Nam chưa đúng định dạng (VD: 0963535196).',
+            'phone.regex' => 'Số điện thoại Việt Nam chưa đúng định dạng (VD: 0968945633).',
             'email.email' => 'Địa chỉ email chưa đúng định dạng.',
             'demand.max' => 'Nội dung nhu cầu không được vượt quá :max ký tự.',
             'province.max' => 'Tên Tỉnh/Thành phố không hợp lệ.',

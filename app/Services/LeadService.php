@@ -239,7 +239,7 @@ class LeadService
                 ]);
                 return [
                     'ok' => false,
-                    'message' => 'Hệ thống phát hiện dấu hiệu gửi tự động, vui lòng tải lại trang hoặc gọi Hotline 0963.535.196.',
+                    'message' => 'Hệ thống phát hiện dấu hiệu gửi tự động, vui lòng tải lại trang hoặc gọi Hotline 0968945633.',
                 ];
             }
 

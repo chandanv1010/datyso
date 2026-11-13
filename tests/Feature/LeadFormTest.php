@@ -156,7 +156,7 @@ class LeadFormTest extends TestCase
 
         $response = $this->postJson(route('contact.register'), [
             'username' => 'Nguyễn Văn An',
-            'phone' => '+84 963.535.196',
+            'phone' => '+84 968.945.633',
             'province' => 'Hà Nội',
             'demand' => '', // Không bắt buộc
             'source_type' => 'product',
@@ -185,7 +185,7 @@ class LeadFormTest extends TestCase
 
         $this->assertDatabaseHas('m_contact', [
             'username' => 'Nguyễn Văn An',
-            'phone' => '0963535196',
+            'phone' => '0968945633',
             'province' => 'Hà Nội',
             'email' => null,
             'product_id' => $this->product->id,
@@ -198,7 +198,7 @@ class LeadFormTest extends TestCase
 
         Http::assertSent(function ($request) {
             return str_starts_with($request->url(), 'https://script.google.com/macros/s/test-webhook/exec')
-                && $request['phone'] === '0963535196'
+                && $request['phone'] === '0968945633'
                 && $request['source_name'] === $this->product->name;
         });
     }

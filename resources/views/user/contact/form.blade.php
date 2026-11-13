@@ -37,14 +37,14 @@
                             <div class="mb-2 d-flex">
                                 <img src="{{ asset('asset/images/em.png') }}" alt="Email" class="contact-icon">
                                 <div class="mx-2"></div>
-                                <span>Datysojsc@gmail.com</span>
+                                <span>support@datyso.vn</span>
                             </div>
 
                             <!-- Phone -->
                             <div class="mb-2 d-flex">
                                 <img src="{{ asset('asset/images/phone.png') }}" alt="Phone" class="contact-icon">
                                 <div class="mx-2"></div>
-                                <span>0963.535.196</span>
+                                <span>0968945633</span>
                             </div>
 
                             <!-- Address -->
@@ -57,7 +57,7 @@
                             <!-- Toll-Free Number -->
                             <div class="mb-2 d-flex">
                                 <div class="mx-2"></div>
-                                <span class="phone-number">0963535196</span>
+                                <span class="phone-number">0968945633</span>
                             </div>
                         </div>
                     </div>

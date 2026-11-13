@@ -668,14 +668,14 @@ class HomeController extends Controller
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Hệ thống đang bận, vui lòng thử lại hoặc gọi trực tiếp Hotline 0963.535.196.',
+                    'message' => 'Hệ thống đang bận, vui lòng thử lại hoặc gọi trực tiếp Hotline 0968945633.',
                 ], 500);
             }
 
             return redirect()
                 ->back()
                 ->withInput($request->except(['hp_company_fax', '_form_ts', '_form_token', 'g_recaptcha_response']))
-                ->with('messageError', 'Hệ thống đang bận, vui lòng thử lại hoặc gọi Hotline 0963.535.196.');
+                ->with('messageError', 'Hệ thống đang bận, vui lòng thử lại hoặc gọi Hotline 0968945633.');
         }
     }
 
