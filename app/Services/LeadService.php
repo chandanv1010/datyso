@@ -102,9 +102,9 @@ class LeadService
         }
 
         if (str_starts_with($cleaned, '+84')) {
-            $cleaned = '0' . substr($cleaned, 3);
+            $cleaned = '0'.substr($cleaned, 3);
         } elseif (str_starts_with($cleaned, '84') && strlen($cleaned) >= 11) {
-            $cleaned = '0' . substr($cleaned, 2);
+            $cleaned = '0'.substr($cleaned, 2);
         }
 
         return ltrim($cleaned, '+');
@@ -116,6 +116,7 @@ class LeadService
     public function makeFormToken(int $timestamp): string
     {
         $key = (string) (config('app.key') ?: 'datyso-lead-key');
+
         return hash_hmac('sha256', (string) $timestamp, $key);
     }
 
@@ -124,17 +125,18 @@ class LeadService
      */
     public function verifyFormTimestamp(?string $rawTimestamp, ?string $token): bool
     {
-        if (empty($rawTimestamp) || empty($token) || !ctype_digit((string) $rawTimestamp)) {
+        if (empty($rawTimestamp) || empty($token) || ! ctype_digit((string) $rawTimestamp)) {
             return false;
         }
 
         $timestamp = (int) $rawTimestamp;
         $expectedToken = $this->makeFormToken($timestamp);
-        if (!hash_equals($expectedToken, (string) $token)) {
+        if (! hash_equals($expectedToken, (string) $token)) {
             return false;
         }
 
         $elapsed = time() - $timestamp;
+
         return $elapsed >= 1 && $elapsed <= 604800;
     }
 
@@ -180,13 +182,51 @@ class LeadService
             $secretKey = trim((string) config('services.lead.recaptcha_secret_key', ''));
         }
 
+        $odooWebhook = trim((string) ($dbSystems['odoo_webhook_url'] ?? ''));
+        if ($odooWebhook === '') {
+            $odooWebhook = trim((string) config('services.odoo.webhook_url', ''));
+        }
+
         return [
             'google_sheet_webhook' => filter_var($sheetWebhook, FILTER_VALIDATE_URL) ? $sheetWebhook : '',
+            'odoo_webhook_url' => filter_var($odooWebhook, FILTER_VALIDATE_URL) ? $odooWebhook : '',
+            'odoo_api_key' => self::getOdooApiKey(),
             'recaptcha_site_key' => $siteKey,
             'recaptcha_secret_key' => $secretKey,
             'recaptcha_enabled' => ($siteKey !== '' && $secretKey !== ''),
             'recaptcha_min_score' => (float) config('services.lead.recaptcha_min_score', 0.5),
         ];
+    }
+
+    /**
+     * Lấy API Key xác thực cho kết nối Odoo CRM.
+     * Thứ tự ưu tiên: Cấu hình CMS (systems.odoo_api_key) -> File .env (ODOO_API_KEY) -> Tự sinh key an toàn lưu cố định vào systems.
+     */
+    public static function getOdooApiKey(): string
+    {
+        $dbSystems = (new self())->getDbSystems();
+        $key = trim((string) ($dbSystems['odoo_api_key'] ?? ''));
+
+        if ($key === '') {
+            $key = trim((string) config('services.odoo.api_key', ''));
+        }
+
+        if ($key === '') {
+            // Tự động tạo API Key an toàn và lưu cố định vào bảng systems để không bị đổi ngẫu nhiên sau mỗi request
+            $key = 'dts_live_'.Str::random(32);
+            try {
+                if (Schema::hasTable('systems')) {
+                    System::updateOrCreate(
+                        ['keyword' => 'odoo_api_key'],
+                        ['content' => $key]
+                    );
+                }
+            } catch (\Throwable $e) {
+                // An toàn khi DB chưa migrate hoặc đang chạy mock test
+            }
+        }
+
+        return $key;
     }
 
     /**
@@ -197,7 +237,7 @@ class LeadService
     public function verifyRecaptcha(?string $token, ?string $ip = null): array
     {
         $settings = $this->getLeadSettings();
-        if (!$settings['recaptcha_enabled']) {
+        if (! $settings['recaptcha_enabled']) {
             return ['ok' => true, 'skipped' => true];
         }
 
@@ -217,8 +257,9 @@ class LeadService
                     'remoteip' => $ip,
                 ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::warning('reCAPTCHA HTTP error', ['status' => $response->status()]);
+
                 return [
                     'ok' => false,
                     'message' => 'Không thể xác thực chống spam lúc này, vui lòng thử lại.',
@@ -230,13 +271,14 @@ class LeadService
             $score = (float) ($body['score'] ?? 0);
             $action = (string) ($body['action'] ?? '');
 
-            if (!$success || $score < $settings['recaptcha_min_score'] || ($action !== '' && $action !== 'generate_lead')) {
+            if (! $success || $score < $settings['recaptcha_min_score'] || ($action !== '' && $action !== 'generate_lead')) {
                 Log::info('Lead blocked by reCAPTCHA v3', [
                     'success' => $success,
                     'score' => $score,
                     'action' => $action,
                     'ip' => $ip,
                 ]);
+
                 return [
                     'ok' => false,
                     'message' => 'Hệ thống phát hiện dấu hiệu gửi tự động, vui lòng tải lại trang hoặc gọi Hotline 0968945633.',
@@ -245,11 +287,12 @@ class LeadService
 
             return ['ok' => true];
         } catch (\Throwable $e) {
-            Log::warning('reCAPTCHA verify exception: ' . $e->getMessage());
+            Log::warning('reCAPTCHA verify exception: '.$e->getMessage());
             // Ở môi trường local không có internet hoặc firewall chặn google.com, tránh khóa nhầm test
             if (app()->environment('local')) {
                 return ['ok' => true, 'skipped' => true];
             }
+
             return [
                 'ok' => false,
                 'message' => 'Lỗi kết nối xác thực bảo mật, vui lòng thử lại.',
@@ -272,10 +315,10 @@ class LeadService
             ? $validated['source_type']
             : 'contact';
 
-        $product = !empty($validated['product_id']) ? Product::find((int) $validated['product_id']) : null;
-        $category = !empty($validated['category_id']) ? Category::find((int) $validated['category_id']) : null;
+        $product = ! empty($validated['product_id']) ? Product::find((int) $validated['product_id']) : null;
+        $category = ! empty($validated['category_id']) ? Category::find((int) $validated['category_id']) : null;
 
-        if ($product && !$category) {
+        if ($product && ! $category) {
             $category = $product->categories()->first();
         }
 
@@ -354,11 +397,66 @@ class LeadService
 
         $settings = $this->getLeadSettings();
         $this->syncToGoogleSheet($contact, $settings['google_sheet_webhook']);
+        $this->syncToOdooWebhook($contact, (string) ($settings['odoo_webhook_url'] ?? ''));
 
         return [
             'contact' => $contact,
             'is_duplicate' => false,
         ];
+    }
+
+    /**
+     * Đồng bộ Lead tức thời sang Odoo Webhook nếu có cấu hình webhook URL.
+     */
+    public function syncToOdooWebhook(Contact $contact, string $webhookUrl): void
+    {
+        if ($webhookUrl === '') {
+            return;
+        }
+
+        try {
+            $apiKey = self::getOdooApiKey();
+            $payload = [
+                'event' => 'lead.created',
+                'contact_id' => $contact->id,
+                'created_at' => optional($contact->created_at)->toIso8601String(),
+                'customer' => [
+                    'name' => $contact->username,
+                    'phone' => $contact->phone,
+                    'email' => $contact->email ?? '',
+                    'province' => $contact->province ?? '',
+                ],
+                'interest' => [
+                    'source_type' => $contact->source_type ?? 'contact',
+                    'source_name' => $contact->source_name ?? '',
+                    'source_url' => $contact->source_url ?? '',
+                    'demand' => $contact->demand ?? '',
+                ],
+            ];
+
+            $response = Http::timeout(4)
+                ->withHeaders([
+                    'Authorization' => 'Bearer '.$apiKey,
+                    'X-API-Key' => $apiKey,
+                    'X-DATYSO-Signature' => hash_hmac('sha256', (string) $contact->id, $apiKey),
+                    'User-Agent' => 'DATYSO-CMS-OdooWebhook/1.0',
+                    'Content-Type' => 'application/json',
+                ])
+                ->post($webhookUrl, $payload);
+
+            if ($response->successful()) {
+                $contact->updateQuietly([
+                    'odoo_synced_at' => now(),
+                ]);
+            } else {
+                Log::warning('Odoo webhook returned non-2xx', [
+                    'status' => $response->status(),
+                    'contact_id' => $contact->id,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Odoo webhook error for Contact #'.$contact->id.': '.$e->getMessage());
+        }
     }
 
     /**
@@ -385,14 +483,14 @@ class LeadService
                 'ip_address' => $contact->ip_address ?? '',
             ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::warning('Google Sheet webhook returned non-2xx', [
                     'status' => $response->status(),
                     'contact_id' => $contact->id,
                 ]);
             }
         } catch (\Throwable $e) {
-            Log::warning('Google Sheet webhook error for Contact #' . $contact->id . ': ' . $e->getMessage());
+            Log::warning('Google Sheet webhook error for Contact #'.$contact->id.': '.$e->getMessage());
         }
     }
 
@@ -402,15 +500,15 @@ class LeadService
     private function buildSummaryContent(array $data): string
     {
         $parts = [];
-        if (!empty($data['source_name'])) {
+        if (! empty($data['source_name'])) {
             $label = $data['source_type'] === 'category' ? 'Danh mục quan tâm' : 'Sản phẩm quan tâm';
-            $parts[] = $label . ': ' . $data['source_name'];
+            $parts[] = $label.': '.$data['source_name'];
         }
-        if (!empty($data['province'])) {
-            $parts[] = 'Tỉnh/thành: ' . $data['province'];
+        if (! empty($data['province'])) {
+            $parts[] = 'Tỉnh/thành: '.$data['province'];
         }
-        if (!empty($data['demand'])) {
-            $parts[] = 'Nhu cầu: ' . $data['demand'];
+        if (! empty($data['demand'])) {
+            $parts[] = 'Nhu cầu: '.$data['demand'];
         }
 
         return implode("\n", $parts);

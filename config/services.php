@@ -43,4 +43,9 @@ return [
         'recaptcha_min_score' => (float) env('RECAPTCHA_MIN_SCORE', 0.5),
     ],
 
+    'odoo' => [
+        'api_key' => env('ODOO_API_KEY'),
+        'webhook_url' => env('ODOO_WEBHOOK_URL'),
+    ],
+
 ];

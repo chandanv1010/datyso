@@ -17,6 +17,10 @@ class Contact extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'odoo_synced_at' => 'datetime',
+    ];
+
     protected static bool $leadSchemaEnsured = false;
 
     public function product()
@@ -36,22 +40,24 @@ class Contact extends Model
      */
     public static function ensureLeadSchema(bool $force = false): void
     {
-        if (static::$leadSchemaEnsured && !$force) {
+        if (static::$leadSchemaEnsured && ! $force) {
             return;
         }
 
         try {
-            if (!Schema::hasTable('m_contact')) {
+            if (! Schema::hasTable('m_contact')) {
                 return;
             }
 
-            $missingColumns = !Schema::hasColumn('m_contact', 'category_id')
-                || !Schema::hasColumn('m_contact', 'province')
-                || !Schema::hasColumn('m_contact', 'demand')
-                || !Schema::hasColumn('m_contact', 'source_type')
-                || !Schema::hasColumn('m_contact', 'source_name')
-                || !Schema::hasColumn('m_contact', 'source_url')
-                || !Schema::hasColumn('m_contact', 'ip_address');
+            $missingColumns = ! Schema::hasColumn('m_contact', 'category_id')
+                || ! Schema::hasColumn('m_contact', 'province')
+                || ! Schema::hasColumn('m_contact', 'demand')
+                || ! Schema::hasColumn('m_contact', 'source_type')
+                || ! Schema::hasColumn('m_contact', 'source_name')
+                || ! Schema::hasColumn('m_contact', 'source_url')
+                || ! Schema::hasColumn('m_contact', 'ip_address')
+                || ! Schema::hasColumn('m_contact', 'odoo_synced_at')
+                || ! Schema::hasColumn('m_contact', 'odoo_lead_id');
 
             $emailNotNullable = false;
             $phoneTooShort = false;
@@ -88,33 +94,39 @@ class Contact extends Model
                     if ($phoneTooShort) {
                         $table->string('phone', 20)->change();
                     }
-                    if (!Schema::hasColumn('m_contact', 'category_id')) {
+                    if (! Schema::hasColumn('m_contact', 'category_id')) {
                         $table->unsignedBigInteger('category_id')->nullable()->after('product_id');
                     }
-                    if (!Schema::hasColumn('m_contact', 'province')) {
+                    if (! Schema::hasColumn('m_contact', 'province')) {
                         $table->string('province', 120)->nullable()->after('phone');
                     }
-                    if (!Schema::hasColumn('m_contact', 'demand')) {
+                    if (! Schema::hasColumn('m_contact', 'demand')) {
                         $table->text('demand')->nullable()->after('province');
                     }
-                    if (!Schema::hasColumn('m_contact', 'source_type')) {
+                    if (! Schema::hasColumn('m_contact', 'source_type')) {
                         $table->string('source_type', 50)->nullable()->after('category_id');
                     }
-                    if (!Schema::hasColumn('m_contact', 'source_name')) {
+                    if (! Schema::hasColumn('m_contact', 'source_name')) {
                         $table->string('source_name', 255)->nullable()->after('source_type');
                     }
-                    if (!Schema::hasColumn('m_contact', 'source_url')) {
+                    if (! Schema::hasColumn('m_contact', 'source_url')) {
                         $table->string('source_url', 500)->nullable()->after('source_name');
                     }
-                    if (!Schema::hasColumn('m_contact', 'ip_address')) {
+                    if (! Schema::hasColumn('m_contact', 'ip_address')) {
                         $table->string('ip_address', 45)->nullable()->after('source_url');
+                    }
+                    if (! Schema::hasColumn('m_contact', 'odoo_synced_at')) {
+                        $table->timestamp('odoo_synced_at')->nullable()->after('is_supported');
+                    }
+                    if (! Schema::hasColumn('m_contact', 'odoo_lead_id')) {
+                        $table->string('odoo_lead_id', 100)->nullable()->after('odoo_synced_at');
                     }
                 });
             }
 
             static::$leadSchemaEnsured = true;
         } catch (\Throwable $e) {
-            Log::warning('Could not auto-migrate m_contact lead columns: ' . $e->getMessage());
+            Log::warning('Could not auto-migrate m_contact lead columns: '.$e->getMessage());
         }
     }
 }

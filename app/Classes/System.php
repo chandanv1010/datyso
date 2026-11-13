@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Classes;
 
 class System
@@ -33,6 +34,23 @@ class System
                 'recaptcha_secret_key' => [
                     'type' => 'text',
                     'label' => 'Google reCAPTCHA v3 Secret Key (tùy chọn)',
+                ],
+            ],
+        ];
+
+        $data['odoo'] = [
+            'label' => 'Cấu hình API kết nối Odoo CRM / ERP',
+            'description' => 'Cung cấp API Key bảo mật và Endpoint để Dev Odoo lấy dữ liệu Lead từ CMS website về Odoo CRM hoặc đồng bộ trạng thái.',
+            'value' => [
+                'api_key' => [
+                    'type' => 'text',
+                    'label' => 'Odoo API Secret Key (Bearer Token)',
+                    'placeholder' => 'Nhập token bảo mật hoặc để trống để hệ thống tự tạo mặc định',
+                ],
+                'webhook_url' => [
+                    'type' => 'text',
+                    'label' => 'Odoo Webhook URL (tùy chọn - tự động đẩy Lead sang Odoo ngay khi khách gửi)',
+                    'placeholder' => 'https://crm.odoo-domain.com/api/v1/leads/webhook',
                 ],
             ],
         ];

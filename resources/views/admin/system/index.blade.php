@@ -59,6 +59,28 @@
                             </div>
                         </div>
                         @endforeach
+
+                        @if($key === 'odoo')
+                        <div class="mt-3 p-3 bg-light rounded border">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="fw-bold text-primary"><i class="fa fa-info-circle me-1"></i> Thông tin kết nối gửi Dev Odoo:</span>
+                                <span class="badge bg-success text-white">REST API v1</span>
+                            </div>
+                            <div class="small text-muted mb-2">
+                                <div><strong>API Endpoint (Lấy danh sách Lead):</strong> <code class="user-select-all text-dark">{{ url('/api/v1/leads') }}</code></div>
+                                <div><strong>API Key hiện tại:</strong> <code class="user-select-all text-danger fw-bold">{{ \App\Services\LeadService::getOdooApiKey() }}</code></div>
+                                <div><strong>Header xác thực:</strong> <code class="user-select-all text-dark">Authorization: Bearer {{ \App\Services\LeadService::getOdooApiKey() }}</code> hoặc <code class="user-select-all text-dark">X-API-Key: {{ \App\Services\LeadService::getOdooApiKey() }}</code></div>
+                            </div>
+                            <div class="bg-dark text-white p-2 rounded small font-monospace user-select-all" style="font-size: 12px; overflow-x: auto;">
+curl -X GET "{{ url('/api/v1/leads?since_id=0&limit=50') }}" \<br>
+&nbsp;&nbsp;-H "Authorization: Bearer {{ \App\Services\LeadService::getOdooApiKey() }}" \<br>
+&nbsp;&nbsp;-H "Accept: application/json"
+                            </div>
+                            <div class="small text-muted mt-2">
+                                <em>Gợi ý: Dev Odoo có thể chạy cronjob định kỳ gọi API với tham số <code>?since_id={id_cuoi_cung}</code> để lấy các Lead mới phát sinh mà không bị sót hoặc trùng lặp.</em>
+                            </div>
+                        </div>
+                        @endif
                     </div>
                     @endif
                 </div>
